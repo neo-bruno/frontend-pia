@@ -1,0 +1,32 @@
+{
+  "name": "frontend-pia",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@mdi/font": "^7.4.47",
+    "axios": "^1.20.0",
+    "cors": "^2.8.6",
+    "dayjs": "^1.11.23",
+    "flag-icons": "^7.5.0",
+    "pinia": "^4.0.3",
+    "socket.io-client": "^4.8.4",
+    "vue": "^3.5.41",
+    "vue-router": "^5.3.0",
+    "vue-sweetalert2": "^5.0.11",
+    "vue-tel-input": "^9.8.0",
+    "vuedraggable": "^4.1.0",
+    "vuetify": "^4.1.12"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.8",
+    "sass-embedded": "^1.103.1",
+    "vite": "^8.2.2",
+    "vite-plugin-vuetify": "^2.1.3"
+  }
+}
