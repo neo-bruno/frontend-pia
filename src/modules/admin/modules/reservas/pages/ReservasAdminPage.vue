@@ -126,7 +126,7 @@
               {{ reserva.cliente_nombre || "Cliente" }}
             </div>
 
-            <v-icon
+            <v-icon color="primary"
               icon="mdi-chevron-right"
               size="24"
               class="flecha"
@@ -156,7 +156,7 @@
         </div>
 
         <div class="reserva-hora-col">
-          <span class="notificacion-dot"></span>
+          <span v-if="tieneNotificacionNoLeida(reserva)" class="notificacion-dot"></span>
           <strong class="reserva-hora-text">{{ formatearHora(reserva.hora_inicio) }}</strong>
         </div>
 
@@ -209,19 +209,74 @@
   </v-overlay>
 
 </div>
+
+<v-dialog
+  v-model="dialogCalendario"
+  max-width="370"
+>
+  <v-card
+    rounded="xl"
+    class="dialog-calendario"
+  >
+
+    <v-card-title class="pa-5 pb-2">
+      <div class="dialog-titulo">
+        Buscar reservas
+      </div>
+
+      <div class="dialog-subtitulo">
+        Selecciona una fecha
+      </div>
+    </v-card-title>
+
+    <v-card-text class="px-5 pt-3">
+      <CalendarioPia
+        v-model="fechaCalendario"
+      />
+    </v-card-text>
+
+    <v-card-actions
+      class="px-5 pb-5 pt-0"
+    >
+
+      <v-btn
+        variant="text"
+        color="secondary"
+        @click="dialogCalendario = false"
+      >
+        Cancelar
+      </v-btn>
+
+      <v-spacer />
+
+      <v-btn
+        color="primary"
+        variant="flat"
+        rounded="lg"
+        :disabled="!fechaCalendario"
+        @click="buscarFechaCalendario"
+      >
+        Buscar
+      </v-btn>
+
+    </v-card-actions>
+
+  </v-card>
+</v-dialog>
 </template>
 
 <script>
 import { useNotificationAdminStore } from "@/stores/notificacionAdmin.store.js";
-import {
-
-  getReservations,
-
-} from "../services/reserva.api.js";
+import { getReservations, } from "../services/reserva.api.js";
+import CalendarioPia from "@/modules/admin/components/CalendarioPia.vue";
 
 export default {
 
   name: "ReservasAdminPage",
+
+  components: {
+    CalendarioPia,
+  },
 
   data() {
 
@@ -232,6 +287,8 @@ export default {
       cargando: false,
 
       fechaSeleccionada: "",
+      fechaCalendario: "",
+      dialogCalendario: false,
 
       numero_dias: 10,
 
@@ -284,6 +341,16 @@ export default {
   },
 
   methods: {
+
+    tieneNotificacionNoLeida(reserva) {
+      const store = useNotificationAdminStore();
+
+      return store.notificaciones?.some(
+        (notificacion) =>
+          Number(notificacion.reserva_id) === Number(reserva.id) &&
+          notificacion.estado === "NO_LEIDA",
+      );
+    },
 
     // ======================================================
 
@@ -444,20 +511,9 @@ export default {
     // ======================================================
 
     async cargarReservas() {
-
       this.cargando = true;
 
-      try {
-        const store = useNotificationAdminStore();
-
-        await store.cargarNoLeidas();
-        console.log("TOKEN ACTUAL:", localStorage.getItem("token"));
-        const token = localStorage.getItem("token");
-
-        console.log("TOKEN ADMIN:", token ? token.substring(0, 30) + "..." : "NO EXISTE");
-
-        console.log('CANTIDAD DE NOTIFICACIONES NO LEIDAS: ', store.cantidadNoLeidas);
-
+      try {        
         const res = await getReservations(this.fechaSeleccionada);
 
         if (res.data?.ok) {
@@ -641,25 +697,11 @@ export default {
     },
 
     // ======================================================
-
     // ABRIR RESERVA
-
     // ======================================================
-
     abrirReserva(reserva) {
-
-      console.log(
-
-        "Reserva seleccionada:",
-
-        reserva,
-
-      );
-
-      // Próximo paso:
-
-      // abrir el detalle de la reserva.
-
+      this.$router.push({path: `reservas/detalle/${reserva.id}`})
+      console.log("Reserva seleccionada:", reserva);
     },
 
     // ======================================================
@@ -669,23 +711,44 @@ export default {
     // ======================================================
 
     seleccionarFechaCalendario() {
-
-      // Lo implementaremos después
-
-      // con el selector de fecha de PIA.
-
+      this.fechaCalendario = this.fechaSeleccionada;
+      this.dialogCalendario = true;
     },
 
+    async buscarFechaCalendario() {
+      if (!this.fechaCalendario) return;
+
+      let fecha;
+
+      if (typeof this.fechaCalendario === "string") {
+        fecha = this.fechaCalendario.substring(0, 10);
+      } else if (this.fechaCalendario instanceof Date) {
+        const year = this.fechaCalendario.getFullYear();
+        const month = String(this.fechaCalendario.getMonth() + 1).padStart(2, "0");
+        const day = String(this.fechaCalendario.getDate()).padStart(2, "0");
+
+        fecha = `${year}-${month}-${day}`;
+      }
+
+      if (!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+        console.error("Fecha de calendario inválida:", this.fechaCalendario);
+        return;
+      }
+
+      console.log("📅 FECHA SELECCIONADA:", fecha);
+
+      this.fechaSeleccionada = fecha;
+      this.dialogCalendario = false;
+
+      await this.cargarReservas();
+    },
+    
   },
 
   mounted() {
-
     this.generarDias();
-
     this.cargarReservas();
-
   },
-
 };
 </script>
 
@@ -849,7 +912,7 @@ export default {
   font-size: 15px;
   line-height: 1.2;
   font-weight: 700;
-  color: #102a43;
+  color: #0f9b9d;
   white-space: normal;
   overflow-wrap: anywhere;
 }
@@ -859,7 +922,7 @@ export default {
   top: 5px !important;
   right: -50px !important;
   margin: 0 !important;
-  color: #102a43;
+  color: #0f9b9d;
 }
 
 .servicio-nombre {
@@ -1033,5 +1096,21 @@ export default {
     min-height: 104px;
 
   }
+}
+
+.dialog-calendario {
+  overflow: hidden;
+}
+
+.dialog-titulo {
+  color: #12345b;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.dialog-subtitulo {
+  color: #8a9aad;
+  font-size: 13px;
+  margin-top: 2px;
 }
 </style>

@@ -200,6 +200,88 @@
 
     </div>
 
+    
+    <!-- =====================================================
+      CÓDIGO DE DESCUENTO
+    ====================================================== -->
+    <div v-if="!consultandoDescuento && tieneDescuentoDisponible" class="descuento-card">
+      <div class="descuento-titulo">
+        <v-icon color="#079b99">mdi-ticket-percent-outline</v-icon>
+        <strong>¿Tienes un código de descuento?</strong>
+      </div>
+
+      <div class="descuento-formulario">
+        <v-text-field
+          v-model="codigoDescuento"
+          label="Código de descuento"
+          placeholder="Ingresa tu código"
+          variant="outlined"
+          density="comfortable"
+          hide-details
+          :disabled="validandoDescuento || descuentoAplicado"
+          @update:model-value="limpiarValidacionDescuento"
+          @keyup.enter="aplicarCodigoDescuento"
+        />
+
+        <v-btn
+          color="#079b99"
+          class="btn-aplicar-descuento"
+          :loading="validandoDescuento"
+          :disabled="!codigoDescuento.trim() || descuentoAplicado"
+          @click="aplicarCodigoDescuento"
+        >
+          {{ descuentoAplicado ? "Aplicado" : "Aplicar" }}
+        </v-btn>
+      </div>
+
+      <div v-if="descuentoAplicado" class="descuento-exito">
+        <div class="descuento-exito-header">
+          <div class="descuento-exito-icono">
+            <v-icon icon="mdi-ticket-confirmation" />
+          </div>
+
+          <div class="descuento-exito-titulo">
+            <strong>Descuento aplicado</strong>
+            <span>{{ codigoDescuento }}</span>
+          </div>
+
+          <v-icon
+            icon="mdi-check-circle"
+            class="descuento-check"
+          />
+        </div>
+
+        <div class="descuento-exito-detalle">
+          <div>
+            <span>Tu ahorro</span>
+            <strong>Bs {{ Number(montoDescuento).toFixed(2) }}</strong>
+          </div>
+
+          <span class="descuento-etiqueta">
+            ¡Ahorro confirmado!
+          </span>
+        </div>
+
+        <button
+          type="button"
+          class="descuento-quitar"
+          @click="quitarDescuento"
+        >
+          <v-icon icon="mdi-close" size="16" />
+          Quitar descuento
+        </button>
+      </div>
+
+      <div
+        v-else-if="mensajeDescuento"
+        class="descuento-mensaje descuento-error"
+      >
+        <v-icon size="18">mdi-alert-circle-outline</v-icon>
+        {{ mensajeDescuento }}
+      </div>
+    </div>
+
+
     <!-- =====================================================
        DETALLE DE PAGO
   ====================================================== -->
@@ -635,6 +717,7 @@ import {
   getFileUrl
 } from "@/utils/ayuda";
 import { confirmReservation } from "../services/reserva.api";
+import { verificarDescuentosPorServicio, validarCodigoDescuento } from "@/modules/cliente/modules/descuentos/services/descuentoCliente.api";
 
 export default {
 
@@ -643,6 +726,15 @@ export default {
       reservaStore: useReservaStore(),
       confirmando: false,
       comprobante: null,
+
+      codigoDescuento: "",
+      descuentoAplicado: false,
+      validandoDescuento: false,
+      mensajeDescuento: "",
+      montoDescuento: 0,
+
+      consultandoDescuento: false,
+      tieneDescuentoDisponible: false,
 
       overlay: false,
     };
@@ -685,22 +777,13 @@ export default {
 
     pago() {
 
-      const precioOriginal = Number(
-        this.reserva?.servicio?.precio || 0
-      )
+      const precioOriginal = Number(this.reserva?.servicio?.precio || 0)
 
-      const montoPromocion = Number(
-        this.reserva?.monto_promocion || 0
-      )
+      const montoPromocion = Number(this.reserva?.monto_promocion || 0)
 
-      const montoDescuento = Number(
-        this.reserva?.monto_descuento || 0
-      )
+      const montoDescuento = this.descuentoAplicado ? Number(this.montoDescuento || 0) : 0;
 
-      const precioAplicable =
-        precioOriginal -
-        montoPromocion -
-        montoDescuento
+      const precioAplicable = precioOriginal - montoPromocion - montoDescuento
 
       const condicion = this.condicion
 
@@ -747,7 +830,7 @@ export default {
 
       }
     },
-
+    
     pagoQr() {
 
       return this.reserva?.profesional?.pago_qr || null
@@ -757,10 +840,17 @@ export default {
   },
 
   watch: {
+    reserva: {
+      immediate: true,
+      handler() {
+        this.consultarDescuentoDelServicio();
+      },
+    },
+
     overlay(val) {
       val && setTimeout(() => {
-        this.overlay = false
-      }, 100000)
+        this.overlay = false;
+      }, 100000);
     },
   },
 
@@ -856,6 +946,113 @@ export default {
       document.body.removeChild(link);
 
     },
+    
+    async consultarDescuentoDelServicio() {
+      this.tieneDescuentoDisponible = false;
+      this.codigoDescuento = "";
+      this.descuentoAplicado = false;
+      this.montoDescuento = 0;
+      this.mensajeDescuento = "";
+
+      const servicioId = Number(
+        this.reserva?.servicio?.id ??
+        this.reserva?.servicio_id
+      );
+
+      if (!servicioId) return;
+
+      this.consultandoDescuento = true;
+
+      try {
+        const respuesta = await verificarDescuentosPorServicio(servicioId);
+
+        console.log(
+          "RESPUESTA DE DESCUENTOS:",
+          respuesta.data
+        );
+
+        this.tieneDescuentoDisponible =
+          respuesta.data?.data?.tiene_descuento_disponible === true;
+
+      } catch (error) {
+        console.error(
+          "Error al consultar descuentos del servicio:",
+          error.response?.data || error
+        );
+
+        this.tieneDescuentoDisponible = false;
+
+      } finally {
+        this.consultandoDescuento = false;
+      }
+    },
+
+    limpiarValidacionDescuento() {
+      this.mensajeDescuento = "";
+      this.descuentoAplicado = false;
+      this.montoDescuento = 0;
+    },
+
+    async aplicarCodigoDescuento() {
+      const codigo = this.codigoDescuento.trim();
+
+      if (!codigo || this.validandoDescuento) return;
+
+      const servicioId = Number(
+        this.reserva?.servicio?.id ??
+        this.reserva?.servicio_id
+      );
+
+      if (!servicioId) {
+        this.mensajeDescuento = "No se pudo identificar el servicio seleccionado.";
+        return;
+      }
+
+      this.validandoDescuento = true;
+      this.mensajeDescuento = "";
+      this.descuentoAplicado = false;
+      this.montoDescuento = 0;
+
+      try {
+        const respuesta = await validarCodigoDescuento(
+          codigo,
+          servicioId,
+        );
+
+        const datos = respuesta.data?.data;
+
+        if (!respuesta.data?.ok || !datos?.valido) {
+          this.mensajeDescuento = "No se pudo validar el código.";
+          return;
+        }
+
+        this.codigoDescuento = datos.codigo;
+        this.montoDescuento = Number(datos.monto_descuento);
+        this.descuentoAplicado = true;
+
+        this.mensajeDescuento = "";
+
+        console.log("DESCUENTO VALIDADO:", datos);
+      } catch (error) {
+        console.error(
+          "Error al validar el código:",
+          error.response?.data || error,
+        );
+
+        this.mensajeDescuento =
+          error.response?.data?.mensaje ||
+          "No se pudo validar el código de descuento.";
+      } finally {
+        this.validandoDescuento = false;
+      }
+    },
+
+    quitarDescuento() {
+      this.codigoDescuento = "";
+      this.descuentoAplicado = false;
+      this.montoDescuento = 0;
+      this.mensajeDescuento = "";
+    },
 
     // =====================================================
     // CONFIRMAR
@@ -904,7 +1101,8 @@ export default {
           hora_fin: this.reserva.hora_fin,
           slot_id: this.reserva.slot_id,
           slots_requeridos: this.reserva.slots_requeridos,
-          slots_reserva: this.reserva.slots_reserva
+          slots_reserva: this.reserva.slots_reserva,
+          codigo_descuento: this.descuentoAplicado ? this.codigoDescuento.trim() : null,
         }
 
         // =====================================================
@@ -982,14 +1180,17 @@ export default {
         }
 
       } catch (error) {
-        this.$swal({
-          title: "Error!",
-          text: error.response?.data?.message ||
-                error.response?.data?.error ||
-                error.message || "Ocurrió un error inesperado",
-          icon: "error",
-          timer: 2500
-        })
+        console.log(error)        
+        
+        this.$piaAlert.error(
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          error.message ||
+          "Ocurrió un error inesperado",
+        {
+          title: "Error en la Confirmacion de Reserva!",
+        }
+      );
       } finally {
         this.overlay = false
         this.confirmando = false
@@ -1538,5 +1739,161 @@ export default {
   color: #303030;
   font-size: 13px;
   text-align: center;
+}
+
+
+.descuento-card {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #cfe8e6;
+  border-radius: 12px;
+  background: #f8fdfc;
+}
+
+.descuento-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: #303030;
+  font-size: 13px;
+}
+
+.descuento-formulario {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 10px;
+  gap: 8px;
+}
+
+.descuento-formulario .v-text-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.btn-aplicar-descuento {
+  min-height: 48px;
+  margin-top: 1px;
+  color: white !important;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.descuento-mensaje {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.descuento-exito {
+  color: #087f5b;
+}
+
+.descuento-error {
+  color: #c62828;
+}
+.descuento-exito {
+  padding: 14px;
+  border: 1px solid #ccebe1;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #f5fcf9, #ffffff);
+}
+
+.descuento-exito-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.descuento-exito-icono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  color: #008f83;
+  background: #ddf6ef;
+}
+
+.descuento-exito-titulo {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.descuento-exito-titulo strong {
+  color: #173b35;
+  font-size: 14px;
+}
+
+.descuento-exito-titulo span {
+  color: #64748b;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.descuento-check {
+  color: #079c82;
+}
+
+.descuento-exito-detalle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #d9ede7;
+}
+
+.descuento-exito-detalle > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.descuento-exito-detalle > div span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.descuento-exito-detalle > div strong {
+  color: #008f73;
+  font-size: 21px;
+}
+
+.descuento-etiqueta {
+  padding: 6px 9px;
+  border-radius: 20px;
+  color: #087a5b;
+  background: #e2f5ec;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.descuento-quitar {
+  display: flex;
+  align-items: center;
+  gap: 4px;  
+  margin: 12px 0 0 auto;
+  padding: 7px;
+  border-radius: 10px;
+  color: #8d1717;
+  font-size: 12px;
+  background: #f8f3f3;
+  border: 0;
+  cursor: pointer;
+}
+
+.descuento-quitar:hover {
+  color: #c24141;
 }
 </style>

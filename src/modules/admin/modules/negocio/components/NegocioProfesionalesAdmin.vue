@@ -1,19 +1,19 @@
 <template>
 <div class="pagina">
 
-  <!-- ===================================================== -->
-  <!-- TÍTULO -->
-  <!-- ===================================================== -->
+  <!-- =====================================================
+         ENCABEZADO
+    ====================================================== -->
+  <section class="page-header">
+    <button class="back-button" @click="volver">
+      <v-icon size="21">mdi-arrow-left</v-icon>
+    </button>
 
-  <div class="page-title">
-
-    <h1>Horarios</h1>
-
-    <p>
-      Asigna qué profesionales atienden en cada horario
-    </p>
-
-  </div>
+    <div class="page-header-text">
+      <h1>Asignacion de Horarios</h1>
+      <p>Asigna qué profesionales atienden en cada horario.</p>
+    </div>
+  </section>
 
   <!-- ===================================================== -->
   <!-- HORARIO DEL NEGOCIO -->
@@ -876,7 +876,11 @@ export default {
       } finally {
         this.overlay = false
       }
-    }
+    },
+
+    volver() {
+      this.$router.go(-1);
+    },
   },
 
   mounted() {
@@ -904,40 +908,54 @@ export default {
 
 }
 
-/* ========================================================= */
-/* TÍTULO */
-/* ========================================================= */
-
-.page-title {
-
-  margin-bottom: 10px;
-
+/* ==========================================================
+   HEADER
+\========================================================== */
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 13px;
 }
 
-.page-title h1 {
+.back-button {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
 
+  border-radius: 12px;
+  border: 1px solid #dcefee;
+  background: #ffffff;
+  color: #008b8b;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+
+  box-shadow: 0 4px 12px rgba(0, 139, 139, 0.07);
+}
+
+.page-header-text {
+  flex: 1;
+}
+
+.page-header-text h1 {
   margin: 0;
 
-  font-size: 25px;
+  color: #102d5a;
 
+  font-size: 20px;
   line-height: 1.15;
-
   font-weight: 700;
-
-  color: #102f4d;
-
 }
 
-.page-title p {
-
+.page-header-text p {
   margin: 3px 0 0;
-
-  font-size: 12.5px;
-
+  font-size: 11px;
   line-height: 1.35;
-
-  color: #58728a;
-
+  color: #60779a;
 }
 
 /* ========================================================= */

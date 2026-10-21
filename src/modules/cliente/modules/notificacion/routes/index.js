@@ -1,3 +1,4 @@
+import CalificarNotificacionDetalle from "../pages/CalificarNotificacionDetalle.vue";
 import DescuentoNotificacionDetalle from "../pages/DescuentoNotificacionDetalle.vue";
 import NotificacionesPage from "../pages/NotificacionesPage.vue";
 import PagoNotificacionDetalle from "../pages/PagoNotificacionDetalle.vue";
@@ -52,6 +53,14 @@ const routes = [
     path: "/cliente/notificaciones/servicio",
     name: "cliente.notificaciones.servicio",
     component: ServicioNotificacionDetalle,
+    meta: {
+      requiresAuth: false,
+    },
+  },
+  {
+    path: "/cliente/notificaciones/calificacion",
+    name: "cliente.notificaciones.calificacion",
+    component: CalificarNotificacionDetalle,
     meta: {
       requiresAuth: false,
     },

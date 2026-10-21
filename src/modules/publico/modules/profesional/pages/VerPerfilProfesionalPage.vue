@@ -80,8 +80,9 @@
     <InformacionProfesionalAdmin v-if="tab === 'informacion'" :profesional="profesional.profesional" :galeria="galeria"/>
 
     <ServiciosProfesionalAdmin v-if="tab === 'servicios'" :servicios="profesional.servicios"/>
+    
+    <ResenaProfesinalAdmin v-if="tab === 'resenas'" :profesional="profesional.profesional"/>
 
-    <ResenaProfesinalAdmin v-if="tab === 'resenas'" :profesional="profesional" />
 
   </div>
 

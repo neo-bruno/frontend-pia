@@ -1,20 +1,19 @@
 <template>
 <div class="negocio-horarios">
 
-  <!-- =========================================
-         HEADER
-    ========================================== -->
-  <div class="page-header">
-    <h1>
-      <!-- <v-icon @click="">mdi-undo</v-icon> -->
-      Horarios del negocio
-    </h1>
+  <!-- =====================================================
+         ENCABEZADO
+    ====================================================== -->
+  <section class="page-header">
+    <button class="back-button" @click="volver">
+      <v-icon size="21">mdi-arrow-left</v-icon>
+    </button>
 
-    <p>
-      Configura los días y horarios de atención de tu negocio.
-    </p>
-
-  </div>
+    <div class="page-header-text">
+      <h1>Horarios del negocio</h1>
+      <p>Configura los días y horarios de atención de tu negocio.</p>
+    </div>
+  </section>
 
   <!-- =========================================
          INFORMACIÓN
@@ -154,6 +153,7 @@
 </template>
 
 <script>
+import router from '@/router';
 import { getBusinessHours, saveBusinessHours } from '../../horarios/services/horario.api';
 
 export default {
@@ -351,6 +351,10 @@ export default {
       }
     },
 
+    volver() {
+      this.$router.go(-1);
+    },
+
   },
 
   mounted(){
@@ -367,27 +371,54 @@ export default {
   padding: 10px 10px 85px;
 }
 
-/* =========================================
+/* ==========================================================
    HEADER
-========================================= */
-
+\========================================================== */
 .page-header {
-  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 13px;
 }
 
-.page-header h1 {
+.back-button {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+
+  border-radius: 12px;
+  border: 1px solid #dcefee;
+  background: #ffffff;
+  color: #008b8b;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+
+  box-shadow: 0 4px 12px rgba(0, 139, 139, 0.07);
+}
+
+.page-header-text {
+  flex: 1;
+}
+
+.page-header-text h1 {
   margin: 0;
+
+  color: #102d5a;
+
   font-size: 20px;
-  line-height: 1.2;
+  line-height: 1.15;
   font-weight: 700;
-  color: #17324d;
 }
 
-.page-header p {
-  margin: 4px 0 0;
-  font-size: 12px;
+.page-header-text p {
+  margin: 3px 0 0;
+  font-size: 11px;
   line-height: 1.35;
-  color: #66809a;
+  color: #60779a;
 }
 
 /* =========================================

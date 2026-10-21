@@ -1,3 +1,5 @@
+import EvaluacionesSuperadminPage from "../pages/EvaluacionesSuperadminPage.vue";
+
 const routes = [
   {
     path: "/superadmin",
@@ -20,6 +22,12 @@ const routes = [
         path: "comprobantes",
         name: "superadmin-comprobantes",
         component: () => import("../pages/ComprobantesSuperadminPage.vue"),
+      },
+
+      {
+        path: "evaluaciones",
+        name: "superadmin-evaluaciones",
+        component: EvaluacionesSuperadminPage,
       },
     ],
   },

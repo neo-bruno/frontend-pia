@@ -16,3 +16,18 @@ export function getReservations(fecha = null) {
     params,
   });
 }
+
+// ============================================================
+// OBTENER UNA RESERVA
+// ============================================================
+
+export function getReservationById(id) {
+  return http().get(`/reserva/${id}`);
+}
+
+// ============================================================
+// CAMBIAR ESTADO DE UNA RESERVA
+// ============================================================
+export function cambiarEstadoReserva(id, datos) {
+  return http().patch(`/reserva/${id}/estado`, datos);
+}

@@ -16,9 +16,7 @@
   </section>
 
   <!-- =====================================================
-
          LOADING
-
     ====================================================== -->
 
   <section v-if="loading" class="loading-container">
@@ -539,12 +537,34 @@ export default {
       try {
 
         const response = await getReservations();
-        const data = response?.data?.data??response?.data?? [];
-        const lista = Array.isArray(data)? data : (data?.reservas || data?.rows || data?.items || []);
-        this.reservas = lista.map(
-          (reserva) =>
-          this.normalizarReserva(reserva),
-        );
+        const data = response?.data?.data?? response?.data?? [];
+        const lista = Array.isArray(data)?data : (data?.reservas || data?.rows || data?.items || []);
+
+        this.reservas = lista.map((reserva) => this.normalizarReserva(reserva)).filter((reserva) => {
+          const estado = String(reserva.estado || "").toUpperCase();
+
+          const estadosActivos = ["PENDIENTE", "PENDIENTE_PAGO", "PENDIENTE_CONFIRMACION", "PENDIENTE_VALIDACION", "CONFIRMADA"];
+
+          if (!estadosActivos.includes(estado)) {
+            return false;
+          }
+
+          if (!reserva.fecha) {
+            return false;
+          }
+
+          const hoy = new Date();
+          hoy.setHours(0, 0, 0, 0);
+
+          const fechaReserva = new Date(
+            `${String(reserva.fecha).substring(0, 10)}T00:00:00`,
+          );
+
+          return (
+            !Number.isNaN(fechaReserva.getTime()) &&
+            fechaReserva >= hoy
+          );
+        });
 
       } catch (error) {
 
@@ -1075,7 +1095,9 @@ export default {
 
     // =====================================================
     volver() {
-      this.$router.push({name: 'cliente'});
+      this.$router.push({
+        name: 'cliente'
+      });
     },
 
   },
@@ -1103,9 +1125,7 @@ export default {
 }
 
 /* ==========================================================
-
    HEADER
-
 \========================================================== */
 .page-header {
   display: flex;

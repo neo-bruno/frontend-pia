@@ -11,100 +11,117 @@ import NegocioAdminPage from "../modules/negocio/pages/NegocioAdminPage.vue";
 import ProfesionalesAdminPage from "../modules/profesional/pages/ProfesionalesAdminPage.vue";
 // import ReservasAdminPage from "../pages/administracion/ReservasAdminPage.vue";
 import ConfiguracionAdminPage from "../pages/administracion/ConfiguracionAdminPage.vue";
+import DescuentosAdminPage from "../modules/descuentos/pages/DescuentosAdminPage.vue";
 
 // MODULOS
 import serviciosRoutes from "../modules/servicios/routes";
-import negocioRoutes from '../modules/negocio/routes'
-import reservasRoutes from '../modules/reservas/routes'
+import negocioRoutes from "../modules/negocio/routes";
+import reservasRoutes from "../modules/reservas/routes";
+import descuentoServicioRoutes from "../modules/descuentos/routes";
+import PerfilAdminPage from "../modules/perfil/pages/PerfilAdminPage.vue";
+import MembresiaAdminPage from "../modules/membresia/pages/MembresiaAdminPage.vue";
 
 const routes = [
-  {
-    path: "/admin",
-    component: AdminLayout,
+	{
+		path: "/admin",
+		component: AdminLayout,
 
-    meta: {
-      requiresAuth: true,
-      roles: ["ADMIN"],
-    },
+		meta: {
+			requiresAuth: true,
+			roles: ["ADMIN"],
+		},
 
-    children: [
-      // ==========================================
-      // PRINCIPAL
-      // ==========================================
+		children: [
+			// ==========================================
+			// PRINCIPAL
+			// ==========================================
 
-      {
-        path: "",
-        name: "admin",
-        component: InicioAdminPage,
-      },
+			{
+				path: "",
+				name: "admin",
+				component: InicioAdminPage,
+			},
 
-      {
-        path: "agenda",
-        name: "agenda",
-        component: AgendaAdminPage,
-      },
+			{
+				path: "agenda",
+				name: "agenda",
+				component: AgendaAdminPage,
+			},
 
-      {
-        path: "historial",
-        name: "historial",
-        component: HistorialAdminPage,
-      },
+			{
+				path: "historial",
+				name: "historial",
+				component: HistorialAdminPage,
+			},
 
-      {
-        path: "servicios",
-        name: "servicios",
-        component: ServiciosAdminPage,
-      },
+			{
+				path: "perfil",
+				name: "perfil",
+				component: PerfilAdminPage,
+			},
 
-      {
-        path: "horarios",
-        name: "horarios",
-        component: HorariosAdminPage,
-      },
+			{
+				path: "servicios",
+				name: "servicios",
+				component: ServiciosAdminPage,
+			},
 
-      {
-        path: "negocio",
-        name: "negocio",
-        component: NegocioAdminPage,
-      },
+			{
+				path: "horarios",
+				name: "horarios",
+				component: HorariosAdminPage,
+			},
 
-      // ==========================================
-      // ADMINISTRACION
-      // ==========================================
+			{
+				path: "negocio",
+				name: "negocio",
+				component: NegocioAdminPage,
+			},
 
-      {
-        path: "clientes",
-        name: "clientes",
-        component: ClientesAdminPage,
-      },
+			// ==========================================
+			// ADMINISTRACION
+			// ==========================================
 
-      {
-        path: "profesionales",
-        name: "profesionales",
-        component: ProfesionalesAdminPage,
-      },
+			{
+				path: "clientes",
+				name: "clientes",
+				component: ClientesAdminPage,
+			},
 
-      // {
-      //   path: "reservas",
-      //   name: "reservas",
-      //   component: ReservasAdminPage,
-      // },
+			{
+				path: "profesionales",
+				name: "profesionales",
+				component: ProfesionalesAdminPage,
+			},
 
-      {
-        path: "configuracion",
-        name: "configuracion",
-        component: ConfiguracionAdminPage,
-      },
+			{
+				path: "descuentos",
+				name: "descuentos",
+				component: DescuentosAdminPage,
+			},
 
-      // ==========================================
-      // MODULOS
-      // ==========================================
+			{
+				path: "membresia",
+				name: "membresia",
+				component: MembresiaAdminPage,
+			},
 
-      ...serviciosRoutes,      
-      ...negocioRoutes,
-      ...reservasRoutes,
-    ],
-  },
+			{
+				path: "configuracion",
+				name: "configuracion",
+				component: ConfiguracionAdminPage,
+			},
+
+			// ==========================================
+			// MODULOS
+			// ==========================================
+
+			...serviciosRoutes,
+			...negocioRoutes,
+			...reservasRoutes,
+			...descuentoServicioRoutes,
+		],
+	},
 ];
 
 export default routes;

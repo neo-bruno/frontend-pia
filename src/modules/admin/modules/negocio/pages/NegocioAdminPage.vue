@@ -85,10 +85,10 @@
     </v-card>
 
     <!-- Página del negocio -->
-    <v-card class="opcion-card" elevation="0" rounded="lg" @click="irA('/admin/negocio/pagina')">
+    <v-card class="opcion-card" elevation="0" rounded="lg" @click="irA('negocio-pagina')">
       <div class="icon-container">
         <v-icon size="24">
-          mdi-pencil-outline
+          mdi-web
         </v-icon>
       </div>
 
@@ -107,9 +107,9 @@
         mdi-chevron-right
       </v-icon>
     </v-card>
-
+    
     <!-- Fotos -->
-    <v-card class="opcion-card" elevation="0" rounded="lg" @click="irA('/admin/negocio/fotos')">
+    <v-card class="opcion-card" elevation="0" rounded="lg" @click="irA('negocio-fotos')">
       <div class="icon-container">
         <v-icon size="24">
           mdi-image-outline
@@ -132,7 +132,7 @@
     </v-card>
 
     <!-- Videos -->
-    <v-card class="opcion-card" elevation="0" rounded="lg" @click="irA('/admin/negocio/videos')">
+    <v-card class="opcion-card" elevation="0" rounded="lg" @click="irA('negocio-videos')">
       <div class="icon-container">
         <v-icon size="24">
           mdi-video-outline

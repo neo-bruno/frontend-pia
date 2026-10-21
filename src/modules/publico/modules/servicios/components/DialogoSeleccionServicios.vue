@@ -7,7 +7,6 @@
     <!-- ================================================= -->
 
     <div class="dialog-header">
-
       <div>
         <div class="titulo">
           ¿Qué servicio deseas realizar?
@@ -21,7 +20,6 @@
       <v-btn icon variant="text" size="small" @click="cerrar">
         <v-icon>mdi-close</v-icon>
       </v-btn>
-
     </div>
 
     <!-- ================================================= -->
@@ -55,9 +53,22 @@
           <div class="servicio-duracion">
             {{ servicio.duracion }} minutos
           </div>
+          
+          <div class="servicio-precios">
+            <div v-if="servicio.descuento_cliente" class="servicio-precio-original">
+              Bs {{ formatoPrecio(servicio.precio) }}
+            </div>
 
-          <div class="servicio-precio">
-            Bs {{ servicio.precio }}
+            <div class="servicio-precio">
+              Bs {{ formatoPrecio(
+                servicio.precio_final ?? servicio.precio
+              ) }}
+            </div>
+
+            <div v-if="servicio.descuento_cliente" class="descuento-etiqueta">
+              <v-icon size="14">mdi-tag</v-icon>
+              {{ textoDescuento(servicio.descuento_cliente) }}
+            </div>
           </div>
 
           <div v-if="servicio.descripcion" class="servicio-descripcion">
@@ -124,12 +135,9 @@
 </template>
 
 <script>
-import {
-  getFileUrl
-} from '@/utils/ayuda';
-import {
-  getServicesByProfessionalId
-} from '../services/servicio.api'
+import { getFileUrl } from '@/utils/ayuda';
+import { getServicesByProfessionalId } from '../services/servicio.api'
+import { getDescuentosDelProfesional } from '@/modules/cliente/modules/descuentos/services/descuentoCliente.api';
 
 export default {
 
@@ -207,37 +215,122 @@ export default {
     // OBTENER SERVICIOS
     // =====================================================
     async obtenerServicios() {
-
       try {
-        this.overlay = true
+        this.overlay = true;
 
-        console.log('🔎 OBTENIENDO SERVICIOS DEL PROFESIONAL:', this.profesionalId)
-        const res = await getServicesByProfessionalId(this.profesionalId)
+        const res = await getServicesByProfessionalId(
+          this.profesionalId
+        );
 
-        console.log('📋 SERVICIOS RECIBIDOS:', res.data)
+        if (!res.data?.ok) {
+          this.servicios = [];
+          return;
+        }
 
-        if (res.data.ok) {
-          this.servicios = res.data.data || []
-        } else {
-          this.servicios = []
+        const servicios = res.data.data || [];
+
+        this.servicios = servicios.map((servicio) => ({
+          ...servicio,
+          precio_final: Number(servicio.precio),
+          descuento_cliente: null,
+        }));
+
+        const token = localStorage.getItem("cliente_token");
+
+        // Si el cliente no inició sesión, mostrar los precios normales.
+        if (!token) return;
+
+        try {
+          const respuesta = await getDescuentosDelProfesional(
+            this.profesionalId
+          );
+
+          const descuentos =
+            respuesta.data?.data?.descuentos || [];
+
+          this.servicios = this.servicios.map((servicio) => {
+            const descuento = descuentos.find(
+              (item) =>
+                Number(item.servicio_id) === Number(servicio.id)
+            );
+
+            if (!descuento) return servicio;
+
+            const precio = Number(servicio.precio);
+            let precioFinal = precio;
+
+            if (descuento.descuento_porcentaje != null) {
+              precioFinal =
+                precio *
+                (1 - Number(descuento.descuento_porcentaje) / 100);
+            } else if (descuento.descuento_monto != null) {
+              precioFinal =
+                precio - Number(descuento.descuento_monto);
+            } else {
+              return servicio;
+            }
+
+            precioFinal = Math.max(
+              0,
+              Math.round((precioFinal + Number.EPSILON) * 100) / 100
+            );
+
+            return {
+              ...servicio,
+              precio_final: precioFinal,
+              descuento_cliente: {
+                ...descuento,
+                precio_original: precio,
+                precio_final: precioFinal,
+              },
+            };
+          });
+        } catch (error) {
+          console.error(
+            "Error obteniendo los descuentos del cliente:",
+            error
+          );
+
+          // Si falla la consulta de descuentos, se conservan
+          // los servicios y sus precios originales.
         }
       } catch (error) {
-        console.error('❌ ERROR OBTENIENDO SERVICIOS:', error)
+        console.error("Error obteniendo servicios:", error);
 
-        this.$swal({
-          title: 'Error',
-          text: error.response?.data?.message ||
+        this.servicios = [];
+
+        this.$piaAlert.error(
+          error.response?.data?.message ||
             error.response?.data?.error ||
             error.message ||
-            'No se pudieron obtener los servicios.',
-          icon: 'error',
-          timer: 2500
-        })
-
+            "No se pudieron obtener los servicios.",
+          {
+            title: "Error al obtener servicios",
+          }
+        );
       } finally {
-        this.overlay = false
+        this.overlay = false;
       }
     },
+
+    formatoPrecio(valor) {
+      return Number(valor || 0).toFixed(2);
+    },
+
+    textoDescuento(descuento) {
+      if (descuento.descuento_porcentaje != null) {
+        return `${Number(descuento.descuento_porcentaje)}% de descuento`;
+      }
+
+      if (descuento.descuento_monto != null) {
+        return `Bs ${this.formatoPrecio(
+          descuento.descuento_monto
+        )} de descuento`;
+      }
+
+      return "Descuento disponible";
+    },
+
 
     // =====================================================
     // SELECCIONAR SERVICIO
@@ -536,4 +629,33 @@ export default {
   border-top: 1px solid #E2E8F0;
 
 }
+
+
+.servicio-precios {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.servicio-precio-original {
+  color: #8793a2;
+  font-size: 12px;
+  text-decoration: line-through;
+}
+
+.descuento-etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 3px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: #e0f5e9;
+  color: #197344;
+  font-size: 11px;
+  font-weight: 650;
+}
+
 </style>

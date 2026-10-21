@@ -32,21 +32,42 @@
   <!-- =====================================================
          FILTROS
     ====================================================== -->
+  
   <div class="filtros">
-    <button class="filtro" :class="{ activo: filtro === 'todas' }" @click="filtro = 'todas'">
-      Todas
-      <span class="contador">
-        {{ notificaciones.length }}
-      </span>
-    </button>
-
-    <button class="filtro" :class="{ activo: filtro === 'no-leidas' }" @click="filtro = 'no-leidas'">
+    <button
+      class="filtro"
+      :class="{ activo: filtro === 'no-leidas' }"
+      @click="filtro = 'no-leidas'"
+    >
       No leídas
       <span v-if="cantidadNoLeidas > 0" class="contador">
         {{ cantidadNoLeidas }}
       </span>
     </button>
+
+    <button
+      class="filtro"
+      :class="{ activo: filtro === 'leidas' }"
+      @click="filtro = 'leidas'"
+    >
+      Leídas
+      <span class="contador">
+        {{ cantidadLeidas }}
+      </span>
+    </button>
+
+    <button
+      class="filtro"
+      :class="{ activo: filtro === 'todas' }"
+      @click="filtro = 'todas'"
+    >
+      Todas
+      <span class="contador">
+        {{ notificaciones.length }}
+      </span>
+    </button>
   </div>
+
 
   <!-- =====================================================
          CARGANDO
@@ -109,7 +130,7 @@
 
       <!-- ICONO -->
       <div class="notificacion-icon" :class="`tipo-${obtenerTipo(notificacion)}`">
-        <v-icon size="21">
+        <v-icon size="21" :color="obtenerTipo(notificacion) === 'calificacion' && estaCalificada(notificacion) ? '#F5B301' : undefined">
           {{ obtenerIcono(notificacion) }}
         </v-icon>
       </div>
@@ -159,6 +180,7 @@ import {
   marcarNotificacionComoLeida,
   marcarTodasComoLeidas,
 } from "../services/notificacion.api";
+import { useNotificationStore } from "@/stores/notification.store";
 
 export default {
   name: "NotificacionesPage",
@@ -167,7 +189,7 @@ export default {
     return {
       notificaciones: [],
 
-      filtro: "todas",
+      filtro: "no-leidas",
 
       cargando: false,
       error: false,
@@ -190,16 +212,47 @@ export default {
     // ======================================================
     // NOTIFICACIONES FILTRADAS
     // ======================================================
-
     notificacionesFiltradas() {
+      const ordenarPorFecha = (a, b) => {
+        const fechaA = new Date(
+          a.created_at || a.fecha_creacion || a.fecha || 0
+        ).getTime();
+
+        const fechaB = new Date(
+          b.created_at || b.fecha_creacion || b.fecha || 0
+        ).getTime();
+
+        return fechaB - fechaA;
+      };
+
+      const noLeidas = this.notificaciones.filter(
+        (n) => !this.estaLeida(n)
+      );
+
+      const leidas = this.notificaciones.filter(
+        (n) => this.estaLeida(n)
+      );
+
       if (this.filtro === "no-leidas") {
-        return this.notificaciones.filter(
-          (notificacion) => !this.estaLeida(notificacion)
-        );
+        return noLeidas.sort(ordenarPorFecha);
       }
 
-      return this.notificaciones;
+      if (this.filtro === "leidas") {
+        return leidas.sort(ordenarPorFecha);
+      }
+
+      return [
+        ...noLeidas.sort(ordenarPorFecha),
+        ...leidas.sort(ordenarPorFecha),
+      ];
     },
+  
+    cantidadLeidas() {
+      return this.notificaciones.filter(
+        (notificacion) => this.estaLeida(notificacion)
+      ).length;
+    },
+
   },
 
   mounted() {
@@ -322,7 +375,18 @@ export default {
         return "membresia";
       }
 
+      if (tipo.includes("evaluacion_pendiente")) {
+        return "calificacion";
+      }
+
       return "general";
+    },
+
+    estaCalificada(notificacion) {
+      return (
+        notificacion.calificada === true ||
+        notificacion.calificada === "true"
+      );
     },
 
     // ======================================================
@@ -331,6 +395,12 @@ export default {
 
     obtenerIcono(notificacion) {
       const tipo = this.obtenerTipo(notificacion);
+
+      if (tipo === "calificacion") {
+        return this.estaCalificada(notificacion)
+          ? "mdi-star"
+          : "mdi-star-outline";
+      }
 
       const iconos = {
         reserva: "mdi-calendar-check-outline",
@@ -365,6 +435,7 @@ export default {
         descuento: "Nuevo descuento",
         servicio: "Nuevo servicio",
         membresia: "Membresía",
+        calificacion: "Califica tu experiencia",
         general: "Nueva notificación",
       };
 
@@ -396,6 +467,7 @@ export default {
         descuento: "Ver descuento",
         servicio: "Ver servicio",
         membresia: "Ver membresía",
+        calificacion: "Calificar servicio",
         general: "Ver detalle",
       };
 
@@ -469,25 +541,11 @@ export default {
     // ======================================================
     // ABRIR NOTIFICACIÓN
     // ======================================================
-
-    async abrirNotificacion(notificacion) {
-      try {
-        if (!this.estaLeida(notificacion)) {
-          await marcarNotificacionComoLeida(
-            notificacion.id
-          );
-
-          this.actualizarComoLeida(notificacion);
-        }
-      } catch (error) {
-        console.error(
-          "Error marcando notificación como leída:",
-          error
-        );
-      }
-
+    abrirNotificacion(notificacion) {
+      // Abrir el detalle sin cambiar el estado de la notificación.
       this.irAlDetalle(notificacion);
     },
+
 
     // ======================================================
     // ACTUALIZAR ESTADO LOCAL
@@ -560,6 +618,17 @@ export default {
           });
           break;
 
+        case "calificacion":
+          this.$router.push({
+            name: "cliente.notificaciones.calificacion",
+            query: {
+              id: notificacion.id,
+              reserva_id: notificacion.reserva_id,
+              evaluacion_id: notificacion.evaluacion_id,
+            },
+          });
+          break;
+
         default:
           break;
       }
@@ -579,11 +648,11 @@ export default {
       try {
         await marcarTodasComoLeidas();
 
-        this.notificaciones.forEach(
-          (notificacion) => {
-            this.actualizarComoLeida(notificacion);
-          }
-        );
+        this.notificaciones.forEach((notificacion) => {
+          this.actualizarComoLeida(notificacion);
+        });
+
+        await useNotificationStore().cargarNoLeidas();
       } catch (error) {
         console.error(
           "Error marcando todas las notificaciones:",

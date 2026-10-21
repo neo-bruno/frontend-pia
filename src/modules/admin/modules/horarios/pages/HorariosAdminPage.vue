@@ -547,15 +547,15 @@ export default {
       } catch (error) {
         console.error("ERROR GUARDAR SLOTS:", error);
 
-        this.$swal({
-          title: "Error!",
-          text: error.response?.data?.message ||
+        this.$piaAlert.error(
+            error.response?.data?.message ||
             error.response?.data?.error ||
             error.message ||
             "Ocurrió un error inesperado",
-          icon: "error",
-          timer: 2500
-        });
+          {
+            title: "Error al guardar los Horarios!",
+          }
+        );
 
       } finally {
         this.overlay = false;

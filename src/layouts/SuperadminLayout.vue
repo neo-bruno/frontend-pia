@@ -9,6 +9,7 @@
       <v-list-item prepend-icon="mdi-view-dashboard-outline" title="Inicio" to="/superadmin" />
 
       <v-list-item prepend-icon="mdi-file-document-check-outline" title="Comprobantes" to="/superadmin/comprobantes" />
+      <v-list-item prepend-icon="mdi-file-edit" title="Evaluacion" to="/superadmin/evaluaciones" />
 
       <!--
         <v-list-item
@@ -60,11 +61,8 @@
   </v-app-bar>
 
   <v-main>
-    <v-container>
-      <h1>SUPERADMIN</h1>
-
-      <router-view />
-    </v-container>
+    <router-view />
+    
   </v-main>
 </v-app>
 </template>

@@ -112,54 +112,42 @@
 
 <script>
 import {
-  useNotificationStore
+  useNotificationStore,
 } from "@/stores/notification.store";
 
+import {
+  conectarSocket,
+  obtenerSocket,
+  desconectarSocket,
+} from "@/services/socket";
+
 export default {
-
   name: "ClienteLayout",
-
-  computed: {
-
-    // ==========================================================
-    // STORE DE NOTIFICACIONES
-    // ==========================================================
-
-    notificationStore() {
-      return useNotificationStore();
-    },
-
-    // ==========================================================
-    // CANTIDAD DE NOTIFICACIONES NO LEÍDAS
-    // ==========================================================
-
-    notificaciones() {
-      return this.notificationStore.cantidadNoLeidas;
-    },
-
-  },
 
   data() {
     return {
       activeNav: "inicio",
+      socketCliente: null,
+      manejadorNuevaNotificacion: null,
     };
   },
 
+  computed: {
+    notificationStore() {
+      return useNotificationStore();
+    },
+
+    notificaciones() {
+      return this.notificationStore.cantidadNoLeidas;
+    },
+  },
+
   methods: {
-
-    // ==========================================================
-    // IR A INICIO
-    // ==========================================================
-
     irInicio() {
       this.$router.push({
         path: "/",
       });
     },
-
-    // ==========================================================
-    // NAVEGAR
-    // ==========================================================
 
     irA(direccion) {
       this.$router.push({
@@ -167,45 +155,88 @@ export default {
       });
     },
 
-    // ==========================================================
-    // ABRIR PÍA
-    // ==========================================================
-
     abrirPia() {
       console.log("Abrir asistente Pía");
     },
 
-    // ==========================================================
-    // CARGAR NOTIFICACIONES
-    // ==========================================================
+    // ========================================================
+    // CARGAR CANTIDAD DE NOTIFICACIONES NO LEÍDAS
+    // ========================================================
 
     async cargarCantidadNotificaciones() {
       try {
-
         await this.notificationStore.cargarNoLeidas();
-
       } catch (error) {
-
         console.error(
           "❌ ERROR AL OBTENER CANTIDAD DE NOTIFICACIONES:",
-          error
+          error,
         );
-
       }
     },
 
-  },
+    // ========================================================
+    // CONECTAR SOCKET DEL CLIENTE
+    // ========================================================
 
-  // ============================================================
-  // MOUNTED
-  // ============================================================
+    conectarNotificacionesCliente() {
+      this.socketCliente = conectarSocket("CLIENTE");
+
+      if (!this.socketCliente) {
+        return;
+      }
+
+      // Evitar registrar el mismo listener más de una vez.
+      if (this.manejadorNuevaNotificacion) {
+        this.socketCliente.off(
+          "nueva_notificacion",
+          this.manejadorNuevaNotificacion,
+        );
+      }
+
+      this.manejadorNuevaNotificacion = async (datos) => {
+        console.log(
+          "🔔 NUEVA NOTIFICACIÓN RECIBIDA POR EL CLIENTE:",
+          datos,
+        );
+
+        try {
+          // Recargar las notificaciones reales desde el backend.
+          // Así el contador no depende de sumar valores a ciegas.
+          await this.notificationStore.cargarNotificaciones();
+        } catch (error) {
+          console.error(
+            "❌ ERROR ACTUALIZANDO NOTIFICACIONES DEL CLIENTE:",
+            error,
+          );
+        }
+      };
+
+      this.socketCliente.on(
+        "nueva_notificacion",
+        this.manejadorNuevaNotificacion,
+      );
+    },
+  },
 
   mounted() {
-
     this.cargarCantidadNotificaciones();
-
+    this.conectarNotificacionesCliente();
   },
 
+  beforeUnmount() {
+    if (
+      this.socketCliente &&
+      this.manejadorNuevaNotificacion
+    ) {
+      this.socketCliente.off(
+        "nueva_notificacion",
+        this.manejadorNuevaNotificacion,
+      );
+    }
+
+    // No desconectamos aquí automáticamente porque el socket
+    // podría reutilizarse en otras pantallas del cliente.
+  },
 };
 </script>
 

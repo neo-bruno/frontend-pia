@@ -66,12 +66,11 @@ export const useNotificationAdminStore = defineStore("notificationAdmin", {
         const respuesta = await getNotificacionesAdminNoLeidas();
 
         const data = respuesta.data?.data || [];
-
+        this.notificaciones = data;
         const cantidad = respuesta.data?.cantidad;
-
         this.cantidadNoLeidas = Number(cantidad) || 0;
-
         return data;
+        
       } catch (error) {
         console.error(
           "❌ ERROR OBTENIENDO NOTIFICACIONES ADMIN NO LEÍDAS:",
@@ -142,6 +141,26 @@ export const useNotificationAdminStore = defineStore("notificationAdmin", {
     },
 
     // ======================================================
+    // MARCAR NOTIFICACIÓN DE UNA RESERVA COMO LEÍDA
+    // ======================================================
+
+    async marcarNotificacionDeReserva(reservaId) {
+      if (!reservaId) return null;
+
+      const notificacion = this.notificaciones.find(
+        (item) =>
+          Number(item.reserva_id) === Number(reservaId) &&
+          item.estado === "NO_LEIDA",
+      );
+
+      if (!notificacion) {
+        return null;
+      }
+
+      return await this.marcarComoLeida(notificacion.id);
+    },
+
+    // ======================================================
     // MARCAR TODAS COMO LEÍDAS
     // ======================================================
 
@@ -165,6 +184,27 @@ export const useNotificationAdminStore = defineStore("notificationAdmin", {
         );
 
         throw error;
+      }
+    },
+
+    // ======================================================
+    // RECIBIR NOTIFICACIÓN POR SOCKET.IO
+    // ======================================================
+
+    recibirNotificacion(notificacion) {
+      if (!notificacion) return;
+
+      // Evitar duplicados
+      const existe = this.notificaciones.some(
+        (item) => item.id === notificacion.id,
+      );
+
+      if (existe) return;
+
+      this.notificaciones.unshift(notificacion);
+
+      if (notificacion.estado === "NO_LEIDA") {
+        this.cantidadNoLeidas++;
       }
     },
 

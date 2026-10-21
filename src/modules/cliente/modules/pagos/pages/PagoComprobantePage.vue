@@ -133,7 +133,7 @@
         </div>
 
         <div class="payment-status" :class="getEstadoClass(pago.estado, pago.comprobante?.estado)">
-          <v-icon size="13">
+          <v-icon size="15">
             {{ getEstadoIcon(pago.estado, pago.comprobante?.estado) }}
           </v-icon>
 
@@ -385,6 +385,7 @@ export default {
       switch (estado) {
         case "APROBADO":
         case "VALIDADO":
+        case "ACEPTADO":
         case "CONFIRMADO":
           return "Validado";
 
@@ -403,13 +404,12 @@ export default {
     },
 
     getEstadoClass(estadoPago, estadoComprobante) {
-      const estado =
-        estadoComprobante ||
-        estadoPago;
-
+      const estado =  estadoComprobante || estadoPago;
+      console.log(estado)
       switch (estado) {
         case "APROBADO":
         case "VALIDADO":
+        case "ACEPTADO":
         case "CONFIRMADO":
           return "estado-success";
 
@@ -430,6 +430,7 @@ export default {
       switch (estado) {
         case "APROBADO":
         case "VALIDADO":
+        case "ACEPTADO":
         case "CONFIRMADO":
           return "mdi-check-circle-outline";
 
@@ -601,8 +602,7 @@ export default {
 
   cursor: pointer;
 
-  box-shadow:
-    0 5px 18px rgba(15, 70, 70, 0.065);
+  box-shadow: 0 5px 18px rgba(15, 70, 70, 0.065);
 
   transition:
     transform 0.18s ease,
@@ -616,8 +616,7 @@ export default {
 
 .pago-card:hover {
   border-color: #a9dddd;
-  box-shadow:
-    0 8px 24px rgba(15, 70, 70, 0.10);
+  box-shadow: 0 8px 24px rgba(15, 70, 70, 0.10);
 }
 
 /* =========================================================
@@ -848,7 +847,7 @@ export default {
 
   border-radius: 20px;
 
-  font-size: 8.5px;
+  font-size: 9.5px;
   font-weight: 700;
 
   white-space: nowrap;

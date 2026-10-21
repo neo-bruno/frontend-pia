@@ -845,8 +845,8 @@ export default {
 }
 
 .status-completed {
-  background: #ddf7e9;
-  color: #0da05b;
+  background: #e4cef8;
+  color: #6d4196;
 }
 
 .status-cancelled {
@@ -872,7 +872,7 @@ export default {
   position: absolute;
 
   right: 36px;
-  bottom: 10px;
+  bottom: 4px;
 
   width: 67px;
   height: 51px;
