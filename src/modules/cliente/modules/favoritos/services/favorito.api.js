@@ -5,13 +5,13 @@ import { http } from "@/services/api";
 // ============================================================
 
 export function getFavoritos() {
-  const token = localStorage.getItem("cliente_token");
+	const token = localStorage.getItem("cliente_token");
 
-  return http().get("/favoritos", {
-    headers: {
-      "x-cliente-token": token,
-    },
-  });
+	return http().get("/favoritos", {
+		headers: {
+			"x-cliente-token": token,
+		},
+	});
 }
 
 // ============================================================
@@ -19,20 +19,15 @@ export function getFavoritos() {
 // ============================================================
 
 export function agregarFavorito(tipo, id) {
-  const token = localStorage.getItem("cliente_token");
+	const token = localStorage.getItem("cliente_token");
 
-  return http().post(
-    "/favoritos",
-    {
-      tipo,
-      id,
-    },
-    {
-      headers: {
-        "x-cliente-token": token,
-      },
-    },
-  );
+	return http().post("/favoritos",{ tipo, id, },
+		{
+			headers: {
+				"x-cliente-token": token,
+			},
+		},
+	);
 }
 
 // ============================================================
@@ -40,13 +35,13 @@ export function agregarFavorito(tipo, id) {
 // ============================================================
 
 export function eliminarFavorito(tipo, id) {
-  const token = localStorage.getItem("cliente_token");
+	const token = localStorage.getItem("cliente_token");
 
-  return http().delete(`/favoritos/${tipo}/${id}`, {
-    headers: {
-      "x-cliente-token": token,
-    },
-  });
+	return http().delete(`/favoritos/${tipo}/${id}`, {
+		headers: {
+			"x-cliente-token": token,
+		},
+	});
 }
 
 // ============================================================
@@ -54,11 +49,11 @@ export function eliminarFavorito(tipo, id) {
 // ============================================================
 
 export function getEstadoFavorito(tipo, id) {
-  const token = localStorage.getItem("cliente_token");
+	const token = localStorage.getItem("cliente_token");
 
-  return http().get(`/favoritos/${tipo}/${id}`, {
-    headers: {
-      "x-cliente-token": token,
-    },
-  });
+	return http().get(`/favoritos/${tipo}/${id}`, {
+		headers: {
+			"x-cliente-token": token,
+		},
+	});
 }

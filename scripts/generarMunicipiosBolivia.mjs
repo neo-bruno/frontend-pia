@@ -1,8 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-const URL_CSV =
-	"https://raw.githubusercontent.com/lab-tecnosocial/municipios-bolivia-2024/main/municipios_bolivia_2024.csv";
+const URL_CSV = "https://raw.githubusercontent.com/lab-tecnosocial/municipios-bolivia-2024/main/municipios_bolivia_2024.csv";
 
 const ARCHIVO_SALIDA = path.resolve(
 	"src/modules/admin/modules/negocio/data/municipiosBolivia.js",

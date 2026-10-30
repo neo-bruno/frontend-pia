@@ -776,7 +776,7 @@ export default {
 
   margin: 0 auto;
 
-  padding: 14px 12px 20px;
+  padding: 14px 1px 20px;
 
   box-sizing: border-box;
 

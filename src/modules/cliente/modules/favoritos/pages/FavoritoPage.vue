@@ -10,11 +10,11 @@
     </button>
 
     <div class="page-header-text">
-      
+
       <h1>Mis Favoritos</h1>
       <p>Guarda tus negocios, profesionales y servicios.</p>
     </div>
-  </section> 
+  </section>
 
   <!-- =====================================================
          FILTROS
@@ -127,11 +127,7 @@
     <!-- ===================================================
            NEGOCIOS
       ==================================================== -->
-    <section v-if="
-          (filtroActivo === 'TODOS' ||
-          filtroActivo === 'NEGOCIOS') &&
-          negocios.length
-        " class="seccion">
+    <section v-if=" (filtroActivo === 'TODOS' || filtroActivo === 'NEGOCIOS') && negocios.length" class="seccion">
 
       <div class="seccion-header">
 
@@ -151,317 +147,101 @@
 
         </div>
 
-        <button v-if="
-              filtroActivo === 'TODOS' &&
-              negocios.length > 3
-            " class="ver-todos" @click="filtroActivo = 'NEGOCIOS'">
+        <button v-if="filtroActivo === 'TODOS' && negocios.length > 3" class="ver-todos" @click="filtroActivo = 'NEGOCIOS'">
           Ver todos
-
           <v-icon size="16">
             mdi-chevron-right
           </v-icon>
         </button>
-
       </div>
 
       <div class="cards-scroll">
-
-        <div v-for="negocio in negociosVisibles" :key="`negocio-${negocio.id}`" class="negocio-card">
-
-          <div class="card-image">
-
-            <img v-if="imagenNegocio(negocio)" :src="imagenNegocio(negocio)" :alt="negocio.nombre" />
-
-            <div v-else class="image-placeholder">
-              <v-icon size="30">
-                mdi-store-outline
-              </v-icon>
-            </div>
-
-            <button class="favorite-button" @click.stop="
-                  quitarFavorito('NEGOCIO', negocio.id)
-                ">
-              <v-icon size="18">
-                mdi-heart
-              </v-icon>
-            </button>
-
-          </div>
-
-          <div class="card-content">
-
-            <h3>
-              {{ negocio.nombre }}
-            </h3>
-
-            <div class="rating">
-
-              <v-icon size="14" color="warning">
-                mdi-star
-              </v-icon>
-
-              <strong>
-                {{ negocio.rating || "5.0" }}
-              </strong>
-
-              <span>
-                ({{ negocio.total_calificaciones || 0 }})
-              </span>
-
-            </div>
-
-            <div v-if="negocio.municipio" class="location">
-
-              <v-icon size="13">
-                mdi-map-marker-outline
-              </v-icon>
-
-              {{ negocio.municipio }}
-
-            </div>
-
-          </div>
-
-        </div>
-
+        <TarjetaNegocio v-for="negocio in negociosVisibles" :key="negocio.id" :negocio="negocio" @click="abrirNegocioFavorito(negocio)" @favorito="quitarFavorito('NEGOCIO', negocio.id)" />
       </div>
 
     </section>
 
-    <!-- ===================================================
-           PROFESIONALES
-      ==================================================== -->
-    <section v-if="
-          (filtroActivo === 'TODOS' ||
-          filtroActivo === 'PROFESIONALES') &&
-          profesionales.length
-        " class="seccion">
-
+    <!-- PROFESIONALES FAVORITOS -->
+    <section v-if="(filtroActivo === 'TODOS' || filtroActivo === 'PROFESIONALES') && profesionales.length" class="seccion">
       <div class="seccion-header">
-
         <div class="seccion-titulo">
-
           <v-icon size="19" color="primary">
             mdi-account-outline
           </v-icon>
+          <h2>Profesionales</h2>
 
-          <h2>
-            Profesionales
-          </h2>
-
-          <span>
-            {{ profesionales.length }}
-          </span>
-
+          <span>{{ profesionales.length }}</span>
         </div>
 
-        <button v-if="
-              filtroActivo === 'TODOS' &&
-              profesionales.length > 3
-            " class="ver-todos" @click="filtroActivo = 'PROFESIONALES'">
+        <button v-if="filtroActivo === 'TODOS' && profesionales.length > 3" class="ver-todos" @click="filtroActivo = 'PROFESIONALES'">
           Ver todos
-
-          <v-icon size="16">
-            mdi-chevron-right
-          </v-icon>
+          <v-icon size="16">mdi-chevron-right</v-icon>
         </button>
-
       </div>
 
       <div class="cards-scroll">
-
-        <div v-for="profesional in profesionalesVisibles" :key="`profesional-${profesional.id}`" class="profesional-card">
-
-          <div class="card-image">
-
-            <img v-if="imagenProfesional(profesional)" :src="imagenProfesional(profesional)" :alt="profesional.nombre" />
-
-            <div v-else class="image-placeholder">
-              <v-icon size="30">
-                mdi-account-outline
-              </v-icon>
-            </div>
-
-            <button class="favorite-button" @click.stop="
-                  quitarFavorito(
-                    'PROFESIONAL',
-                    profesional.id
-                  )
-                ">
-              <v-icon size="18">
-                mdi-heart
-              </v-icon>
-            </button>
-
-          </div>
-
-          <div class="card-content">
-
-            <h3>
-              {{ profesional.nombre }}
-            </h3>
-
-            <div class="rating">
-
-              <v-icon size="14" color="warning">
-                mdi-star
-              </v-icon>
-
-              <strong>
-                {{ profesional.rating || "5.0" }}
-              </strong>
-
-              <span>
-                ({{ profesional.total_calificaciones || 0 }})
-              </span>
-
-            </div>
-
-            <p v-if="profesional.descripcion" class="descripcion">
-              {{ profesional.descripcion }}
-            </p>
-
-          </div>
-
-        </div>
-
+        <TarjetaProfesional v-for="profesional in profesionalesVisibles" :key="`profesional-${profesional.id}`" :profesional="profesional" @favorito="quitarFavorito('PROFESIONAL', profesional.id)" @click="abrirProfesionalFavorito(profesional)" />
       </div>
-
     </section>
 
     <!-- ===================================================
            SERVICIOS
       ==================================================== -->
-    <section v-if="
-          (filtroActivo === 'TODOS' ||
-          filtroActivo === 'SERVICIOS') &&
-          servicios.length
-        " class="seccion">
-
+    <section v-if="(filtroActivo === 'TODOS' || filtroActivo === 'SERVICIOS') && servicios.length" class="seccion">
       <div class="seccion-header">
-
         <div class="seccion-titulo">
-
           <v-icon size="19" color="primary">
             mdi-content-cut
           </v-icon>
-
-          <h2>
-            Servicios
-          </h2>
+          <h2>Servicios</h2>
 
           <span>
             {{ servicios.length }}
           </span>
-
         </div>
 
-        <button v-if="
-              filtroActivo === 'TODOS' &&
-              servicios.length > 3
-            " class="ver-todos" @click="filtroActivo = 'SERVICIOS'">
+        <button v-if="filtroActivo === 'TODOS' && servicios.length > 7" class="ver-todos" @click="filtroActivo = 'SERVICIOS'">
           Ver todos
-
-          <v-icon size="16">
-            mdi-chevron-right
-          </v-icon>
+          <v-icon size="16">mdi-chevron-right</v-icon>
         </button>
-
       </div>
 
-      <div class="servicios-lista">
-
-        <div v-for="servicio in serviciosVisibles" :key="`servicio-${servicio.id}`" class="servicio-card">
-
-          <div class="servicio-image">
-
-            <img v-if="imagenServicio(servicio)" :src="imagenServicio(servicio)" :alt="servicio.nombre" />
-
-            <div v-else class="image-placeholder">
-              <v-icon size="28">
-                mdi-content-cut
-              </v-icon>
-            </div>
-
-          </div>
-
-          <div class="servicio-content">
-
-            <div class="servicio-header">
-
-              <h3>
-                {{ servicio.nombre }}
-              </h3>
-
-              <button class="favorite-button small" @click.stop="
-                    quitarFavorito(
-                      'SERVICIO',
-                      servicio.id
-                    )
-                  ">
-                <v-icon size="17">
-                  mdi-heart
-                </v-icon>
-              </button>
-
-            </div>
-
-            <div class="servicio-info">
-
-              <span>
-                <v-icon size="13" color="warning">
-                  mdi-star
-                </v-icon>
-
-                {{ servicio.rating || "5.0" }}
-              </span>
-
-              <span v-if="servicio.duracion">
-                <v-icon size="13">
-                  mdi-clock-outline
-                </v-icon>
-
-                {{ servicio.duracion }} min
-              </span>
-
-              <strong v-if="servicio.precio !== null">
-                Bs.
-                {{ formatoPrecio(servicio.precio) }}
-              </strong>
-
-            </div>
-
-            <div v-if="servicio.profesional" class="servicio-profesional">
-
-              <v-icon size="14">
-                mdi-account-outline
-              </v-icon>
-
-              {{ servicio.profesional.nombre }}
-
-            </div>
-
-          </div>
-
-        </div>
-
+      <div class="servicios-grid">
+        <TarjetaServicio v-for="servicio in serviciosVisibles" :key="`servicio-${servicio.id}`"
+          :servicio="{
+            ...servicio,
+            servicio_id: servicio.id,
+            servicio_nombre: servicio.nombre,
+            servicio_descripcion: servicio.descripcion,
+            profesional_nombre:
+              servicio.profesional?.nombre ||
+              servicio.profesional_nombre ||
+              '',
+            favorito: true,
+          }" @favorito="quitarFavorito('SERVICIO', servicio.id)" @click="abrirServicioFavorito(servicio)"
+        />
       </div>
 
     </section>
-
   </div>
 
 </div>
 </template>
 
 <script>
-import {
-  getFavoritos,
-  eliminarFavorito,
-} from "../services/favorito.api";
+import {getFavoritos, eliminarFavorito} from "../services/favorito.api";
+import TarjetaNegocio from "@/modules/publico/components/TarjetaNegocio.vue";
+import TarjetaProfesional from "@/modules/publico/components/TarjetaProfesional.vue";
+import TarjetaServicio from "@/modules/publico/components/TarjetaServicio.vue";
+import {getFileUrl} from "@/utils/ayuda";
 
 export default {
   name: "FavoritoPage",
+  components: {
+    TarjetaNegocio,
+    TarjetaProfesional,
+    TarjetaServicio,
+  },
 
   data() {
     return {
@@ -507,7 +287,7 @@ export default {
         return this.servicios;
       }
 
-      return this.servicios.slice(0, 3);
+      return this.servicios.slice(0, 7);
     },
   },
 
@@ -516,6 +296,63 @@ export default {
   },
 
   methods: {
+    getFileUrl,
+
+    abrirNegocioFavorito(negocio) {
+      if (!negocio) return;
+      console.log(negocio)
+      // Conserva la navegación que utiliza PIA
+      // para abrir el detalle público del negocio.
+      if (negocio.slug) {
+        this.$router.push({
+          name: "NegocioPublico",
+          params: {
+            slug: negocio.slug
+          },
+        });
+      }
+    },
+
+    abrirProfesionalFavorito(profesional) {
+      if (!profesional) return;
+      console.log(profesional)
+      if (profesional.slug) {
+        this.$router.push({
+          name: "perfil-profesional",
+          params: {
+            slug: profesional.slug,
+          },
+        }).catch(() => {});
+      } else {
+        console.info(
+          "El profesional no tiene slug público:",
+          profesional
+        );
+      }
+    },
+
+    abrirServicioFavorito(servicio) {
+      if (!servicio) return;
+
+      const slug =
+        servicio.profesional?.slug ||
+        servicio.profesional_slug ||
+        servicio.slug_profesional;
+
+      if (slug) {
+        this.$router.push({
+          name: "perfil-profesional",
+          params: { slug },
+        }).catch((error) => {
+          console.error("Error al abrir el perfil del profesional:", error);
+        });
+      } else {
+        console.warn(
+          "El servicio no tiene el slug del profesional asociado:",
+          servicio
+        );
+      }
+    },
 
     // ======================================================
     // CARGAR FAVORITOS
@@ -523,41 +360,23 @@ export default {
     async cargarFavoritos() {
       this.cargando = true;
       this.error = false;
-
       try {
-
         const response = await getFavoritos();
 
-        const data =
-          response?.data?.data ||
-          response?.data || {};
+        console.log("RESPUESTA API FAVORITOS:", response.data);
 
-        this.negocios =
-          Array.isArray(data.negocios) ?
-          data.negocios :
-          [];
+        const data = response?.data?.data || response?.data || {};
 
-        this.profesionales =
-          Array.isArray(data.profesionales) ?
-          data.profesionales :
-          [];
+        console.log("SERVICIOS RECIBIDOS:", data.servicios);
 
-        this.servicios =
-          Array.isArray(data.servicios) ?
-          data.servicios :
-          [];
+        this.negocios = Array.isArray(data.negocios) ? data.negocios : [];
+        this.profesionales = Array.isArray(data.profesionales) ? data.profesionales : [];
+        this.servicios = Array.isArray(data.servicios) ? data.servicios : [];
 
       } catch (error) {
-
-        console.error(
-          "Error cargando favoritos:",
-          error
-        );
-
+        console.error("Error cargando favoritos:", error);
         this.error = true;
-
       } finally {
-
         this.cargando = false;
       }
     },
@@ -568,7 +387,6 @@ export default {
     async quitarFavorito(tipo, id) {
 
       try {
-
         await eliminarFavorito(tipo, id);
 
         if (tipo === "NEGOCIO") {
@@ -605,34 +423,43 @@ export default {
     // IMÁGENES
     // ======================================================
     imagenNegocio(negocio) {
-      return (
+      const imagen =
         negocio?.portada ||
         negocio?.logo ||
-        null
-      );
+        negocio?.logo_url ||
+        negocio?.imagen ||
+        negocio?.imagen_url ||
+        negocio?.url_logo ||
+        negocio?.url_portada;
+
+      if (!imagen || typeof imagen !== "string") {
+        return null;
+      }
+
+      const ruta = imagen.trim();
+
+      if (!ruta) return null;
+
+      // La imagen ya es una URL completa.
+      if (/^https?:\/\//i.test(ruta)) {
+        return ruta;
+      }
+
+      // Imagen servida desde la raíz del frontend o backend.
+      const baseURL = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
+
+      return `${baseURL.replace(/\/+$/, "")}/${ruta.replace(/^\/+/, "")}`;
     },
     imagenProfesional(profesional) {
-      return (
-        profesional?.foto ||
-        profesional?.imagen ||
-        profesional?.portada ||
-        null
-      );
+      return (profesional?.foto || profesional?.imagen || profesional?.portada || null);
     },
 
     imagenServicio(servicio) {
-      if (
-        servicio?.imagen &&
-        typeof servicio.imagen === "object"
-      ) {
-        return servicio.imagen.url || null;
+      if (servicio?.imagen && typeof servicio.imagen === "object") {
+        return getFileUrl(servicio.imagen.url) || null;
       }
 
-      return (
-        servicio?.imagen ||
-        servicio?.imagen_url ||
-        null
-      );
+      return (getFileUrl(servicio?.imagen) || getFileUrl(servicio?.imagen_url) || null);
     },
 
     // ======================================================
@@ -658,7 +485,9 @@ export default {
     },
 
     volver() {
-      this.$router.push({name: 'cliente'});
+      this.$router.push({
+        name: 'cliente'
+      });
     },
   },
 };
@@ -1269,6 +1098,41 @@ export default {
     width: 160px;
 
     flex-basis: 160px;
+  }
+}
+
+.favoritos-negocios-lista {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  width: 100%;
+}
+
+.cards-scroll>* {
+  flex: 0 0 150px;
+  min-width: 0;
+}
+
+@media (min-width: 600px) {
+  .cards-scroll>* {
+    flex-basis: 160px;
+  }
+}
+
+.servicios-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.servicios-grid > * {
+  min-width: 0;
+}
+
+@media (max-width: 360px) {
+  .servicios-grid {
+    gap: 7px;
   }
 }
 </style>

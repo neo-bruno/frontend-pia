@@ -574,7 +574,7 @@ export default {
 ============================================================ */
 
 .perfil-content {
-  padding: 18px 16px 30px;
+  padding: 18px 5px 30px;
 }
 
 /* ============================================================
@@ -585,7 +585,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 8px 4px 22px;
+  padding: 2px 4px 2px;
 }
 
 .avatar-container {

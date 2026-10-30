@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 
-import publicoRoutes from '@/modules/publico/routes'
+import publicoRoutes from "@/modules/publico/routes";
 import superadminRoutes from "@/modules/superadmin/routes";
 import adminRoutes from "@/modules/admin/routes";
 import clienteRoutes from "@/modules/cliente/routes";
@@ -8,48 +8,56 @@ import clienteRoutes from "@/modules/cliente/routes";
 import { authGuard, roleGuard } from "./guards";
 
 const routes = [
-  // ==========================================
-  // AUTENTICACIÓN
-  // ==========================================
+	// ==========================================
+	// AUTENTICACIÓN
+	// ==========================================
 
-  {
-    path: "/login",
-    name: "login",
+	{
+		path: "/login",
+		name: "login",
 
-    component: () => import("@/modules/auth/LoginPage.vue"),
+		component: () => import("@/modules/auth/LoginPage.vue"),
 
-    meta: {
-      requiresAuth: false,
-    },
-  },
+		meta: {
+			requiresAuth: false,
+		},
+	},
 
-  // ==========================================
-  // ACTORES
-  // ==========================================
+	// ==========================================
+	// ACTORES
+	// ==========================================
 
-  ...publicoRoutes,
-  ...superadminRoutes,
-  ...adminRoutes,
-  ...clienteRoutes,
+	...publicoRoutes,
+	...superadminRoutes,
+	...adminRoutes,
+	...clienteRoutes,
 ];
 
 const router = createRouter({
-  history: createWebHistory(),
-  routes,
+	history: createWebHistory(),
+	routes,
+});
+
+router.afterEach(() => {
+	window.scrollTo({
+		top: 0,
+		left: 0,
+		behavior: "instant",
+	});
 });
 
 router.beforeEach((to) => {
-  const authResult = authGuard(to);
+	const authResult = authGuard(to);
 
-  if (authResult !== true) {
-    return authResult;
-  }
+	if (authResult !== true) {
+		return authResult;
+	}
 
-  return roleGuard(to);
+	return roleGuard(to);
 });
 
 router.onError((error) => {
-  console.error("❌ Error de navegación:", error);
+	console.error("❌ Error de navegación:", error);
 });
 
 export default router;

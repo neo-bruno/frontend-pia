@@ -22,7 +22,7 @@ const routes = [
   },
 
   {
-    path: "/ver/profesional/:slug",
+    path: "/profesional/:slug",
     name: "ver-perfil-profesional",
     component: VerPerfilProfesionalPage,
     meta: {

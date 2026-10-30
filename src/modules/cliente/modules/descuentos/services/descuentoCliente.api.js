@@ -25,8 +25,7 @@ export function getDescuentosDelProfesional(profesionalId) {
 export function verificarDescuentosPorServicio(servicioId) {
 	const token = localStorage.getItem("cliente_token");
 
-	return http().get(
-		`/descuento-cliente/servicio/${servicioId}/disponibilidad`,
+	return http().get(`/descuento-cliente/servicio/${servicioId}/disponibilidad`,
 		{
 			headers: {
 				"x-cliente-token": token,
@@ -38,12 +37,7 @@ export function verificarDescuentosPorServicio(servicioId) {
 export function validarCodigoDescuento(codigo, servicioId) {
 	const token = localStorage.getItem("cliente_token");
 
-	return http().post(
-		"/descuento-cliente/validar-codigo",
-		{
-			codigo,
-			servicio_id: servicioId,
-		},
+	return http().post("/descuento-cliente/validar-codigo", { codigo, servicio_id: servicioId, },
 		{
 			headers: {
 				"x-cliente-token": token,

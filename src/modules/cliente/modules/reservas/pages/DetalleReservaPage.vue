@@ -43,11 +43,7 @@
   <section v-else-if="reserva" class="reservation-detail">
 
     <!-- CABECERA DE LA RESERVA -->
-    <article class="reservation-summary" :style="{
-          '--business-color': reserva.color1,
-          '--business-light': reserva.color2,
-          '--business-dark': reserva.color3
-        }">
+    <article class="reservation-summary">
       <div class="summary-top">
 
         <div class="reservation-date" :class="getDateClass(reserva)">
@@ -111,27 +107,59 @@
           </div>
         </div>
       </div>
-
+      
       <!-- NEGOCIO -->
       <div class="detail-section business-section">
         <div class="section-label">Negocio</div>
 
-        <div class="business-content">
+        <div class="business-content" @click="irNegocio">
           <div class="business-logo">
-            <img v-if="reserva.logo" :src="getMediaUrl(reserva.logo)" :alt="reserva.negocio" @error="handleImageError" />
-            <v-icon v-else size="25">mdi-storefront-outline</v-icon>
+            <img v-if="reserva.negocio?.logo" :src="getMediaUrl(reserva.negocio.logo)" :alt="reserva.negocio.nombre" @error="handleImageError"/>
+            <v-icon v-else size="25">
+              mdi-storefront-outline
+            </v-icon>
           </div>
 
           <div class="business-info">
-            <strong>{{ reserva.negocio }}</strong>
-            <span>{{ reserva.direccion || "Dirección no disponible" }}</span>
+            <strong>{{ reserva.negocio?.nombre || "Negocio" }}</strong>
+
+            <span v-if="reserva.negocio?.eslogan">
+              {{ reserva.negocio?.eslogan }}
+            </span>
+
+            <span v-if="reserva.negocio?.direccion">
+              {{ reserva.negocio?.direccion }}
+            </span>
+
+            <span v-if="reserva.negocio?.municipio || reserva.negocio?.departamento">
+              {{[ reserva.negocio?.municipio, reserva.negocio?.departamento].filter(Boolean).join(", ")}}
+            </span>
           </div>
 
           <v-icon class="business-arrow" size="25">
             mdi-chevron-right
           </v-icon>
         </div>
+
+        <div v-if="reserva.negocio?.informacion" class="business-extra">
+          <strong>
+            <v-icon size="16">mdi-information-outline</v-icon>
+            Información del negocio
+          </strong>
+
+          <p>{{ reserva.negocio.informacion }}</p>
+        </div>
+
+        <div v-if="reserva.negocio?.recomendacion" class="business-extra business-recomendacion">
+          <strong>
+            <v-icon size="16">mdi-lightbulb-outline</v-icon>
+            Recomendación
+          </strong>
+
+          <p>{{ reserva.negocio.recomendacion }}</p>
+        </div>
       </div>
+
     </article>
 
     <!-- INFORMACIÓN DE LA RESERVA -->
@@ -156,11 +184,16 @@
         </strong>
       </div>
 
-      <div class="info-row">
-        <v-icon size="20">mdi-human-handsup</v-icon>
-        <span>Slot</span>
-        <strong>{{ cantidadSlots }} slot{{ cantidadSlots === 1?'' : 's' }}</strong>
+      <div class="info-row info-row-duration">
+        <v-icon size="20">mdi-timer-outline</v-icon>
+        <span>Tiempo de atención</span>
+        <strong>
+          {{ duracionTexto || "Duración no disponible" }}
+        </strong>
       </div>
+      <p class="info-helper">
+        Este es el tiempo reservado para atenderte por el servicio seleccionado.
+      </p>
 
       <div class="info-row">
         <v-icon size="20">mdi-check-circle-outline</v-icon>
@@ -171,6 +204,118 @@
         </strong>
       </div>
     </section>
+
+    
+    <!-- CONDICIONES DEL SERVICIO -->
+    <section v-if="reserva.condicionesServicio.length" class="detail-section condiciones-section">
+      <div class="condiciones-heading">
+        <v-icon size="21">mdi-clipboard-text-outline</v-icon>
+
+        <h3>Condiciones del servicio</h3>
+      </div>
+
+      <p class="condiciones-intro">
+        Ten en cuenta estas condiciones antes de asistir a tu cita.
+      </p>
+
+      <div
+        v-for="(condicion, index) in reserva.condicionesServicio"
+        :key="condicion.id || index"
+        class="condicion-item"
+      >
+        <v-icon size="17">mdi-information-outline</v-icon>
+
+        
+      <div class="condicion-content">
+        <strong>
+          {{ condicion.titulo || condicion.nombre }}
+        </strong>
+
+        <p>{{ condicion.descripcion }}</p>
+
+        <!-- REGLAS DE LA CONDICIÓN -->
+        <div class="condicion-reglas">
+
+          <div
+            v-if="condicion.requiere_adelanto"
+            class="condicion-regla"
+          >
+            <v-icon size="15">mdi-cash-check</v-icon>
+
+            <span>
+              Adelanto requerido:
+              <strong v-if="condicion.monto_adelanto != null">
+                Bs {{ Number(condicion.monto_adelanto).toFixed(2) }}
+              </strong>
+
+              <strong
+                v-else-if="condicion.porcentaje_adelanto != null"
+              >
+                {{ condicion.porcentaje_adelanto }}%
+              </strong>
+            </span>
+          </div>
+
+          <div
+            v-if="condicion.permite_cancelar !== null"
+            class="condicion-regla"
+          >
+            <v-icon size="15">mdi-calendar-remove</v-icon>
+
+            <span>
+              Cancelación:
+              {{ condicion.permite_cancelar ? "Permitida" : "No permitida" }}
+            </span>
+          </div>
+
+          <div
+            v-if="
+              condicion.permite_cancelar &&
+              condicion.limite_horas_cancelacion != null
+            "
+            class="condicion-regla"
+          >
+            <v-icon size="15">mdi-clock-outline</v-icon>
+
+            <span>
+              Anticipación para cancelar:
+              {{ condicion.limite_horas_cancelacion }} horas
+            </span>
+          </div>
+
+          <div
+            v-if="condicion.permite_reprogramar !== null"
+            class="condicion-regla"
+          >
+            <v-icon size="15">mdi-calendar-edit</v-icon>
+
+            <span>
+              Reprogramación:
+              {{ condicion.permite_reprogramar ? "Permitida" : "No permitida" }}
+            </span>
+          </div>
+
+          <div
+            v-if="
+              condicion.permite_reprogramar &&
+              condicion.limite_horas_reprogramacion != null
+            "
+            class="condicion-regla"
+          >
+            <v-icon size="15">mdi-clock-outline</v-icon>
+
+            <span>
+              Anticipación para reprogramar:
+              {{ condicion.limite_horas_reprogramacion }} horas
+            </span>
+          </div>
+
+        </div>
+      </div>
+
+      </div>
+    </section>
+
 
     <!-- PRECIOS -->
     <section class="detail-section prices-section">
@@ -257,6 +402,7 @@
 
 <script>
 import {
+  cancelReservation,
   getReservationById
 } from "../services/reserva.api";
 
@@ -268,6 +414,7 @@ export default {
       loading: false,
       error: null,
       reserva: null,
+      cargandoCancelacion: false,
     };
   },
 
@@ -288,10 +435,6 @@ export default {
         month: "long",
         year: "numeric",
       });
-    },
-
-    cantidadSlots() {
-      return Number(this.reserva?.cantidadSlots || 1);
     },
 
     duracionTexto() {
@@ -373,18 +516,8 @@ export default {
         }
 
         const response = await getReservationById(id);
-
-        console.log(
-          "RESPUESTA DETALLE RESERVA:",
-          JSON.stringify(response?.data, null, 2)
-        );
-
-        const data =
-          response?.data?.data??
-          response?.data?.reserva??
-          response?.data??
-          null;
-
+        const data = response?.data?.data?? response?.data?.reserva?? response?.data?? null;        
+        console.log('CARGAR RESERVA: ', data)
         if (!data) {
           throw new Error("No se encontró la reserva.");
         }
@@ -404,119 +537,322 @@ export default {
         this.loading = false;
       }
     },
-
+        
     normalizarReserva(reserva) {
-      const negocio = reserva?.negocio || {};
-      const profesional = reserva?.profesional || {};
-      const servicio = reserva?.servicio || {};
+      console.log('RESERVA: ', reserva)
+      const negocioRaw = reserva?.negocio || {};
+      const profesionalRaw = reserva?.profesional || {};
+      const servicioRaw = reserva?.servicio || {};
 
       const montoPromocion = Number(
-        reserva?.monto_promocion??
-        reserva?.montoPromocion??
+        reserva?.monto_promocion ??
+        reserva?.montoPromocion ??
         0
       );
 
       const montoDescuento = Number(
-        reserva?.monto_descuento??
-        reserva?.montoDescuento??
+        reserva?.monto_descuento ??
+        reserva?.montoDescuento ??
         0
       );
 
+      // =====================================================
+      // CONDICIONES DEL SERVICIO
+      // =====================================================
+
+      const condicionesRaw =
+        servicioRaw?.condiciones ??
+        servicioRaw?.condicion ??
+        reserva?.condiciones_servicio ??
+        reserva?.condicionesServicio ??
+        reserva?.condiciones ??
+        reserva?.condicion ??
+        [];
+      
+      let listaCondiciones = [];
+
+      if (Array.isArray(condicionesRaw)) {
+        listaCondiciones = condicionesRaw;
+      } else if (typeof condicionesRaw === "string") {
+        try {
+          const parsed = JSON.parse(condicionesRaw);
+
+          listaCondiciones = Array.isArray(parsed)
+            ? parsed
+            : parsed && typeof parsed === "object"
+              ? [parsed]
+              : [condicionesRaw];
+        } catch {
+          listaCondiciones = condicionesRaw.trim()
+            ? [condicionesRaw]
+            : [];
+        }
+      } else if (
+        condicionesRaw &&
+        typeof condicionesRaw === "object"
+      ) {
+        listaCondiciones = [condicionesRaw];
+      }
+
+      const condicionesServicio = listaCondiciones
+        .map((condicion) => {
+          if (typeof condicion === "string") {
+            return {
+              id: null,
+              titulo: "Condición del servicio",
+              nombre: "Condición del servicio",
+              descripcion: condicion.trim(),
+              requiere_adelanto: false,
+              monto_adelanto: null,
+              porcentaje_adelanto: null,
+              permite_reprogramar: null,
+              permite_cancelar: null,
+              limite_horas_reprogramacion: null,
+              limite_horas_cancelacion: null,
+            };
+          }
+
+          return {
+            // Conserva todos los campos que envía el backend.
+            ...condicion,
+
+            id:
+              condicion.id ??
+              condicion.condicion_id ??
+              null,
+
+            titulo:
+              condicion.nombre ??
+              condicion.titulo ??
+              condicion.tipo ??
+              "Condición del servicio",
+
+            nombre:
+              condicion.nombre ??
+              condicion.titulo ??
+              condicion.tipo ??
+              "Condición del servicio",
+
+            descripcion:
+              condicion.descripcion ??
+              condicion.detalle ??
+              condicion.mensaje ??
+              condicion.texto ??
+              "",
+
+            requiere_adelanto:
+              condicion.requiere_adelanto ?? false,
+
+            monto_adelanto:
+              condicion.monto_adelanto != null
+                ? Number(condicion.monto_adelanto)
+                : null,
+
+            porcentaje_adelanto:
+              condicion.porcentaje_adelanto != null
+                ? Number(condicion.porcentaje_adelanto)
+                : null,
+
+            permite_reprogramar:
+              condicion.permite_reprogramar ?? null,
+
+            permite_cancelar:
+              condicion.permite_cancelar ?? null,
+
+            limite_horas_reprogramacion:
+              condicion.limite_horas_reprogramacion != null
+                ? Number(condicion.limite_horas_reprogramacion)
+                : null,
+
+            limite_horas_cancelacion:
+              condicion.limite_horas_cancelacion != null
+                ? Number(condicion.limite_horas_cancelacion)
+                : null,
+          };
+        })
+        .filter(
+          (condicion) =>
+            condicion.descripcion ||
+            condicion.titulo !== "Condición del servicio" ||
+            condicion.requiere_adelanto ||
+            condicion.permite_cancelar !== null ||
+            condicion.permite_reprogramar !== null
+        );
+
+      // =====================================================
+      // NEGOCIO
+      // Utiliza los atributos actuales de la tabla negocio.
+      // =====================================================
+
+      const negocio = {
+        id:
+          negocioRaw.id ??
+          reserva?.negocio_id ??
+          null,
+
+        slug: negocioRaw.slug ??
+          reserva?.slug ??
+          null,
+
+        nombre:
+          negocioRaw.nombre ??
+          reserva?.negocio_nombre ??
+          "Negocio",
+
+        eslogan:
+          negocioRaw.eslogan ??
+          reserva?.negocio_eslogan ??
+          "",
+
+        informacion:
+          negocioRaw.informacion ??
+          reserva?.negocio_informacion ??
+          "",
+
+        recomendacion:
+          negocioRaw.recomendacion ??
+          reserva?.negocio_recomendacion ??
+          "",
+
+        departamento:
+          negocioRaw.departamento ??
+          reserva?.negocio_departamento ??
+          "",
+
+        municipio:
+          negocioRaw.municipio ??
+          reserva?.negocio_municipio ??
+          "",
+
+        zona:
+          negocioRaw.zona ??
+          reserva?.negocio_zona ??
+          "",
+
+        direccion:
+          negocioRaw.direccion ??
+          reserva?.negocio_direccion ??
+          "",
+
+        telefono:
+          negocioRaw.telefono ??
+          reserva?.negocio_telefono ??
+          "",
+
+        logo:
+          negocioRaw.logo ??
+          reserva?.negocio_logo ??
+          null,
+
+        portada:
+          negocioRaw.portada ??
+          reserva?.negocio_portada ??
+          null,
+      };
+
+      // =====================================================
+      // RESULTADO NORMALIZADO
+      // =====================================================
+      
       return {
         ...reserva,
 
-        id: reserva?.id ||
-          reserva?.reserva_id,
-
-        numero: reserva?.numero ||
-          reserva?.numero_reserva,
-
-        fecha: reserva?.fecha ||
-          reserva?.fecha_reserva ||
-          reserva?.fechaReserva ||
+        id:
+          reserva?.id ??
+          reserva?.reserva_id ??
           null,
 
-        horaInicio: reserva?.hora_inicio ||
-          reserva?.horaInicio ||
-          reserva?.hora ||
+        numero:
+          reserva?.numero ??
+          reserva?.numero_reserva ??
+          null,
+
+        fecha:
+          reserva?.fecha ??
+          reserva?.fecha_reserva ??
+          reserva?.fechaReserva ??
+          null,
+
+        horaInicio:
+          reserva?.hora_inicio ??
+          reserva?.horaInicio ??
+          reserva?.hora ??
           "",
 
-        horaFin: reserva?.hora_fin ||
-          reserva?.horaFin ||
+        horaFin:
+          reserva?.hora_fin ??
+          reserva?.horaFin ??
           "",
 
-        estado: reserva?.estado ||
-          reserva?.estado_reserva ||
+        estado:
+          reserva?.estado ??
+          reserva?.estado_reserva ??
           "PENDIENTE",
 
-        servicio: servicio?.nombre ||
-          reserva?.servicio_nombre ||
+        // Nombre del servicio para la interfaz existente.
+        servicio:
+          servicioRaw?.nombre ??
+          reserva?.servicio_nombre ??
           "Servicio",
 
-        categoria: servicio?.categoria?.nombre ||
-          reserva?.categoria_nombre ||
-          reserva?.categoria ||
+        // Objeto completo del servicio con sus condiciones.
+        servicioDetalle: {
+          ...servicioRaw,
+          condiciones: condicionesServicio,
+        },
+
+        categoria:
+          servicioRaw?.categoria?.nombre ??
+          reserva?.categoria_nombre ??
+          reserva?.categoria ??
           "",
 
-        profesional: profesional?.nombre ||
-          profesional?.nombre_completo ||
-          reserva?.profesional_nombre ||
+        profesional:
+          profesionalRaw?.nombre ??
+          profesionalRaw?.nombre_completo ??
+          reserva?.profesional_nombre ??
           "Profesional",
 
-        profesionalFoto: profesional?.foto ||
-          profesional?.imagen ||
-          reserva?.profesional_foto ||
+        profesionalFoto:
+          profesionalRaw?.foto ??
+          profesionalRaw?.imagen ??
+          reserva?.profesional_foto ??
           null,
 
-        calificacion: profesional?.calificacion??
-          profesional?.rating??
-          reserva?.calificacion??
+        calificacion:
+          profesionalRaw?.calificacion ??
+          profesionalRaw?.rating ??
+          reserva?.calificacion ??
           null,
 
-        cantidadCalificaciones: profesional?.cantidad_calificaciones??
-          profesional?.cantidadCalificaciones??
-          reserva?.cantidad_calificaciones??
+        cantidadCalificaciones:
+          profesionalRaw?.cantidad_calificaciones ??
+          profesionalRaw?.cantidadCalificaciones ??
+          reserva?.cantidad_calificaciones ??
           null,
 
-        negocio: negocio?.nombre ||
-          reserva?.negocio_nombre ||
-          "Negocio",
+        negocio,
 
-        direccion: negocio?.direccion ||
-          reserva?.negocio_direccion ||
-          "",
+        direccion: negocio.direccion,
+        logo: negocio.logo,
 
-        logo: negocio?.logo ||
+        imagen:
+          negocio.portada ??
+          negocio.logo ??
+          reserva?.negocio_imagen ??
+          reserva?.imagen_url ??
           null,
-
-        imagen: negocio?.portada ||
-          negocio?.logo ||
-          reserva?.negocio_imagen ||
-          reserva?.imagen_url ||
-          null,
-
-        color1: negocio?.color_1 ||
-          negocio?.color1 ||
-          "#079DAF",
-
-        color2: negocio?.color_2 ||
-          negocio?.color2 ||
-          "#E9F8F9",
-
-        color3: negocio?.color_3 ||
-          negocio?.color3 ||
-          "#102D5A",
 
         cantidadSlots: Number(
-          reserva?.cantidad_slots??
-          reserva?.cantidadSlots??
+          reserva?.cantidad_slots ??
+          reserva?.cantidadSlots ??
           1
         ),
 
         precioOriginal: Number(
-          reserva?.precio_original??
-          reserva?.precioOriginal??
-          servicio?.precio??
+          reserva?.precio_original ??
+          reserva?.precioOriginal ??
+          servicioRaw?.precio ??
           0
         ),
 
@@ -524,25 +860,26 @@ export default {
         montoDescuento,
 
         precioAplicable: Number(
-          reserva?.precio_aplicable??
-          reserva?.precioAplicable??
+          reserva?.precio_aplicable ??
+          reserva?.precioAplicable ??
           0
         ),
 
         montoPagado: Number(
-          reserva?.monto_pagado??
-          reserva?.montoPagado??
+          reserva?.monto_pagado ??
+          reserva?.montoPagado ??
           0
         ),
 
-        saldo: Number(
-          reserva?.saldo??
-          0
-        ),
+        saldo: Number(reserva?.saldo ?? 0),
 
-        promocionNombre: reserva?.promocion_nombre ||
-          reserva?.promocionNombre ||
+        promocionNombre:
+          reserva?.promocion_nombre ??
+          reserva?.promocionNombre ??
           null,
+
+        // Arreglo que consume el v-for de condiciones.
+        condicionesServicio,
       };
     },
 
@@ -728,23 +1065,76 @@ export default {
 
       img.style.display = "none";
     },
-
+    
     reprogramar() {
-      if (!this.reserva?.id) return;
+      const reservaId = this.reserva?.id;
 
-      this.$router.push(
-        `/cliente/reservas/${this.reserva.id}/reprogramar`
-      );
+      if (!reservaId) {
+        this.$piaAlert.error(
+          "No se pudo identificar la reserva que deseas reprogramar.",
+          {
+            title: "Reprogramación",
+          },
+        );
+        return;
+      }
+
+      this.$router.push({
+        name: "cliente.reprogramacion",
+        params: { reservaId },
+      });
     },
 
-    cancelar() {
-      console.log(
-        "Cancelar reserva:",
-        this.reserva
-      );
+    irNegocio() {
+      const slug = this.reserva?.negocio?.slug;
+      if (!slug) {
+        this.$piaAlert.warning("No se encontró el enlace del negocio. Inténtalo nuevamente.", {title: "Negocio no disponible",});
+        return;
+      }
+      this.$router.push({name: "perfil-negocio", params: { slug }});
+    },
+        
+    async cancelar() {
+      if (!this.reserva?.id) {
+        this.$piaAlert.error("No se encontró la reserva.");
+        return;
+      }
 
-      // Aquí conectaremos la API de cancelación
-      // cuando implementemos la regla definitiva.
+      if (this.cargandoCancelacion) return;
+
+      const confirmado = await this.$piaAlert.confirm({
+        title: "¿Cancelar reserva?",
+        message: `¿Estás seguro de que deseas cancelar la reserva #${this.reserva.numero ?? this.reserva.id}? Esta acción no se puede deshacer.`,
+        cancelText: "No, volver",
+        confirmText: "Sí, cancelar",
+      });
+
+      if (!confirmado) return;
+
+      try {
+        this.cargandoCancelacion = true;
+
+        const respuesta = await cancelReservation(this.reserva.id, { motivo: "Cancelada por el cliente", });
+
+        if (!respuesta.data?.ok) {
+          throw new Error(respuesta.data?.message || "No se pudo cancelar la reserva.");
+        }
+
+        // Actualizar el estado local solo tras confirmar
+        // que el backend realizó la cancelación.
+        this.reserva.estado = "CANCELADA";
+
+        this.$piaAlert.success(respuesta.data.message || "La reserva se canceló correctamente.");
+
+        await this.$router.push("/cliente/reservas");
+      } catch (error) {
+        console.error("Error cancelando reserva:", error);
+        const mensaje = error.response?.data?.message || error.message || "No se pudo cancelar la reserva. Inténtalo nuevamente.";
+
+        this.$piaAlert.error(mensaje);
+      } finally {
+        this.cargandoCancelacion = false;
+      }
     },
 
     volver() {
@@ -1190,8 +1580,19 @@ export default {
 .info-row>span {
   color: #7184a0;
   font-size: 10px;
-  width: 78px;
-  min-width: 78px;
+  width: 100px;
+  min-width: 100px;
+}
+
+.info-helper {
+  margin: 0 0 5px 29px;
+  color: #7b8da3;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.info-row-duration > strong {
+  max-width: 48%;
 }
 
 .info-row>strong {
@@ -1316,4 +1717,144 @@ export default {
     margin: 0 auto;
   }
 }
+
+
+/* ==========================================================
+   CONDICIONES DEL SERVICIO
+========================================================== */
+
+.condiciones-section {
+  background: #f7fbfc;
+  border-bottom: 1px solid #e4eff2;
+}
+
+.condiciones-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 5px;
+  color: #078b98;
+}
+
+.condiciones-heading h3 {
+  margin: 0;
+  color: #102d5a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.condiciones-intro {
+  margin: 0 0 9px;
+  color: #7184a0;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.condicion-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px;
+  margin-top: 6px;
+  border: 1px solid #e2eff1;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.condicion-item > .v-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #078b98;
+}
+
+.condicion-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.condicion-content strong {
+  display: block;
+  margin-bottom: 3px;
+  color: #173762;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.condicion-content p {
+  margin: 0;
+  color: #526b89;
+  font-size: 10px;
+  line-height: 1.55;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.business-extra {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #f5fafb;
+  border: 1px solid #e5eff1;
+}
+
+.business-extra > strong {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 5px;
+  color: #173762;
+  font-size: 11px;
+}
+
+.business-extra > strong .v-icon {
+  color: #078b98;
+}
+
+.business-extra p {
+  margin: 0;
+  color: #60758f;
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.business-recomendacion {
+  background: #fffaf0;
+  border-color: #f2e7cc;
+}
+
+.business-recomendacion > strong .v-icon {
+  color: #c58a17;
+}
+
+.condicion-reglas {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid #e5eff1;
+}
+
+.condicion-regla {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  color: #526b89;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.condicion-regla > .v-icon {
+  flex-shrink: 0;
+  color: #078b98;
+  margin-top: 1px;
+}
+
+.condicion-regla span strong {
+  color: #173762;
+  font-weight: 700;
+}
+
 </style>

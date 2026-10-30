@@ -156,7 +156,7 @@ export default {
     },
 
     abrirPia() {
-      console.log("Abrir asistente Pía");
+      this.$router.push({path: '/'})
     },
 
     // ========================================================

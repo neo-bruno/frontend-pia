@@ -150,7 +150,7 @@
     </section>
 
     <!-- NEGOCIO -->
-    <section v-if="profesional.negocio" class="negocio-card">
+    <section v-if="profesional.negocio" class="negocio-card" @click="irNegocio">
 
       <div class="negocio-icon">
         <v-icon size="19">
@@ -668,6 +668,7 @@ export default {
           this.profesional = null
           return
         }
+        console.log('OBTENER PROFESIONAL: ', res.data.data)
 
         this.profesional = {
           ...res.data.data.profesional,
@@ -713,6 +714,15 @@ export default {
         name: 'ver-perfil-profesional',
         params: {
           slug: this.profesional.slug
+        }
+      })
+    },
+    irNegocio(){
+      console.log('Negocio: ', this.profesional.negocio)
+      this.$router.push({
+        name: 'perfil-negocio',
+        params: {
+          slug: this.profesional.negocio.slug
         }
       })
     },

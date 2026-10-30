@@ -42,7 +42,7 @@
 
     <div class="cliente-section">
 
-      <v-avatar size="76" color="primary" class="cliente-avatar">
+      <v-avatar size="56" color="primary" class="cliente-avatar">
         <span>
           {{ inicialesCliente(reserva.cliente_nombre) }}
         </span>
@@ -718,7 +718,7 @@ export default {
 .estado-wrapper {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 18px;
+  margin-bottom: 3px;
 }
 
 .estado {

@@ -1,6 +1,6 @@
 <template>
-<v-dialog v-model="dialog" max-width="430" persistent scrollable>
-  <v-card class="editar-perfil-dialog" max-height="90vh">
+<v-bottom-sheet v-model="dialog" :persistent="guardando" scrollable>
+  <v-card class="editar-perfil-dialog" width="100%" max-height="92dvh">
 
     <!-- ================================================= -->
     <!-- HEADER -->
@@ -93,7 +93,7 @@
     </div>
 
   </v-card>
-</v-dialog>
+</v-bottom-sheet>
 </template>
 
 <script>
@@ -367,110 +367,232 @@ export default {
 </script>
 
 <style scoped>
+/* =====================================================
+   SHEET DE PERFIL PIA
+   ===================================================== */
+
 .editar-perfil-dialog {
-  border-radius: 22px !important;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  max-height: 92dvh;
   overflow: hidden;
+  border-radius: 24px 24px 0 0 !important;
+  background: #ffffff;
+  box-shadow: 0 -8px 35px rgba(15, 65, 70, 0.14) !important;
+}
+
+/* El sheet ocupa todo el ancho disponible */
+:deep(.v-overlay__content) {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  align-self: flex-end;
+}
+
+:deep(.v-bottom-sheet > .v-overlay__content) {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
 }
 
 /* =====================================================
    HEADER
-===================================================== */
+   ===================================================== */
 
 .dialog-header {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 18px 14px;
-  border-bottom: 1px solid #e8eeee;
-  background: #fff;
+  gap: 12px;
+  padding: 18px 20px 16px;
+  border-bottom: 1px solid #e5f0f0;
+  background: #ffffff;
+  position: relative;
+}
+
+.dialog-header::before {
+  content: "";
+  position: absolute;
+  width: 38px;
+  height: 4px;
+  border-radius: 999px;
+  background: #cbdede;
+  top: 7px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .dialog-title {
-  font-size: 19px;
-  font-weight: 700;
-  color: #263238;
+  font-size: 20px;
+  line-height: 1.25;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: #173b45;
 }
 
 .dialog-subtitle {
-  margin-top: 3px;
-  font-size: 12px;
-  color: #78909c;
+  margin-top: 5px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #718992;
+}
+
+.dialog-header :deep(.v-btn) {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #e1eeee;
+  border-radius: 13px;
+  color: #52717a;
 }
 
 /* =====================================================
    CONTENIDO
-===================================================== */
+   ===================================================== */
 
 .dialog-content {
-  padding: 18px !important;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 20px 20px 16px !important;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .campo {
-  margin-bottom: 15px;
+  margin-bottom: 17px;
 }
 
 .campo label {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #45636d;
+}
+
+.campo :deep(.v-field) {
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.campo :deep(.v-field__outline) {
+  color: #d5e3e5;
+}
+
+.campo :deep(.v-field--focused .v-field__outline) {
+  color: #008f91;
+}
+
+.campo :deep(.v-field__prepend-inner > .v-icon) {
+  color: #78939b;
+  opacity: 1;
+}
+
+.campo :deep(input),
+.campo :deep(.v-select__selection-text) {
+  color: #244650;
+  font-size: 15px;
+}
+
+.campo :deep(.v-messages__message) {
   font-size: 12px;
-  font-weight: 600;
-  color: #546e7a;
 }
 
 /* =====================================================
-   NOTA
-===================================================== */
+   NOTA DE PRIVACIDAD
+   ===================================================== */
 
 .nota-privacidad {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 5px;
-  padding: 11px 12px;
-  border-radius: 12px;
-  background: #f1fbfb;
-  color: #607d8b;
-  font-size: 11px;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 13px 14px;
+  border: 1px solid #d9efec;
+  border-radius: 14px;
+  background: #f0faf9;
+  color: #58777e;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .nota-privacidad .v-icon {
-  color: #008b8b;
+  flex-shrink: 0;
+  color: #008f91;
 }
 
 /* =====================================================
-   ACCIONES
-===================================================== */
+   ACCIONES FIJAS AL PIE DEL SHEET
+   ===================================================== */
 
 .dialog-actions {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 14px 18px 18px;
-  border-top: 1px solid #e8eeee;
-  background: #fff;
+  gap: 10px;
+  padding: 14px 20px calc(16px + env(safe-area-inset-bottom));
+  border-top: 1px solid #e5f0f0;
+  background: #ffffff;
+}
+
+.dialog-actions :deep(.v-btn) {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 48px;
+  border-radius: 14px !important;
+  text-transform: none !important;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0;
 }
 
 .btn-cancelar {
-  min-height: 42px;
-  padding: 0 18px !important;
-  border-radius: 12px !important;
-  background: #ee6565 !important;
-  color: white !important;
-  text-transform: none !important;
-  font-weight: 600;
+  background: #fff0f0 !important;
+  color: #d94c59 !important;
+  border: 1px solid #ffd9dc;
 }
 
 .btn-guardar {
-  min-height: 42px;
-  padding: 0 18px !important;
-  border-radius: 12px !important;
-  background: #008b8b !important;
-  color: white !important;
-  text-transform: none !important;
-  font-weight: 600;
+  background: #008f91 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 10px rgba(0, 143, 145, 0.2) !important;
+}
+
+.btn-guardar:disabled {
+  opacity: 0.65;
+}
+
+/* =====================================================
+   AJUSTES PARA MÓVILES
+   ===================================================== */
+
+@media (max-width: 600px) {
+  .editar-perfil-dialog {
+    max-height: 92dvh;
+    border-radius: 24px 24px 0 0 !important;
+  }
+
+  .dialog-header {
+    padding: 22px 18px 15px;
+  }
+
+  .dialog-title {
+    font-size: 19px;
+  }
+
+  .dialog-content {
+    padding: 18px 18px 12px !important;
+  }
+
+  .campo {
+    margin-bottom: 16px;
+  }
+
+  .dialog-actions {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
 }
 </style>

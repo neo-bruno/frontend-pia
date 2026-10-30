@@ -28,9 +28,16 @@
 
     <v-card-text class="servicios-container">
 
-      <div v-for="servicio in servicios" :key="servicio.id" class="servicio-item" :class="{
-    seleccionado: servicioSeleccionado?.id === servicio.id
-  }" @click="seleccionarServicio(servicio)">
+      <div
+        v-for="servicio in servicios"
+        :key="servicio.id"
+        class="servicio-item"
+        :class="{
+          seleccionado: servicioSeleccionado?.id === servicio.id,
+          'servicio-en-promocion': Boolean(servicio.descuento_cliente)
+        }"
+        @click="seleccionarServicio(servicio)"
+      >
 
         <!-- IMAGEN -->
         <div class="servicio-imagen">
@@ -46,28 +53,36 @@
         <!-- INFORMACIÓN -->
         <div class="servicio-info">
 
+          <div v-if="servicio.descuento_cliente" class="promocion-badge">
+            <v-icon size="13">mdi-tag</v-icon>
+            PROMOCIÓN
+          </div>
+
           <div class="servicio-nombre">
             {{ servicio.nombre }}
           </div>
 
           <div class="servicio-duracion">
+            <v-icon size="14">mdi-clock-outline</v-icon>
             {{ servicio.duracion }} minutos
           </div>
-          
-          <div class="servicio-precios">
-            <div v-if="servicio.descuento_cliente" class="servicio-precio-original">
-              Bs {{ formatoPrecio(servicio.precio) }}
-            </div>
 
-            <div class="servicio-precio">
-              Bs {{ formatoPrecio(
-                servicio.precio_final ?? servicio.precio
-              ) }}
+          <div class="servicio-precios">
+            <div class="precio-linea">
+              <div class="servicio-precio">
+                Bs {{ formatoPrecio(servicio.precio_final ?? servicio.precio) }}
+              </div>
+              <div v-if="servicio.descuento_cliente" class="servicio-precio-original">
+                Bs {{ formatoPrecio(servicio.precio) }}
+              </div>
             </div>
 
             <div v-if="servicio.descuento_cliente" class="descuento-etiqueta">
-              <v-icon size="14">mdi-tag</v-icon>
-              {{ textoDescuento(servicio.descuento_cliente) }}
+              <v-icon size="14">mdi-tag-heart-outline</v-icon>
+              Ahorras Bs {{ formatoPrecio(ahorroServicio(servicio)) }}
+              <span v-if="porcentajeAhorro(servicio) > 0">
+                ({{ porcentajeAhorro(servicio) }}%)
+              </span>
             </div>
           </div>
 
@@ -212,15 +227,14 @@ export default {
     getFileUrl,
 
     // =====================================================
-    // OBTENER SERVICIOS
+    // OBTENER SERVICIOS    
     // =====================================================
+    
     async obtenerServicios() {
       try {
         this.overlay = true;
 
-        const res = await getServicesByProfessionalId(
-          this.profesionalId
-        );
+        const res = await getServicesByProfessionalId(this.profesionalId);
 
         if (!res.data?.ok) {
           this.servicios = [];
@@ -229,17 +243,20 @@ export default {
 
         const servicios = res.data.data || [];
 
+        // Mostrar inicialmente los precios normales.
         this.servicios = servicios.map((servicio) => ({
           ...servicio,
           precio_final: Number(servicio.precio),
           descuento_cliente: null,
         }));
 
-        const token = localStorage.getItem("cliente_token");
+        // const token = localStorage.getItem("cliente_token");
 
         // Si el cliente no inició sesión, mostrar los precios normales.
-        if (!token) return;
+        // if (!token) return;
 
+        // Consultar descuentos públicos y, si hay sesión,
+        // también los descuentos personales del cliente.
         try {
           const respuesta = await getDescuentosDelProfesional(
             this.profesionalId
@@ -257,23 +274,26 @@ export default {
             if (!descuento) return servicio;
 
             const precio = Number(servicio.precio);
-            let precioFinal = precio;
+            let montoDescuento = 0;
 
             if (descuento.descuento_porcentaje != null) {
-              precioFinal =
+              montoDescuento =
                 precio *
-                (1 - Number(descuento.descuento_porcentaje) / 100);
+                Number(descuento.descuento_porcentaje) /
+                100;
             } else if (descuento.descuento_monto != null) {
-              precioFinal =
-                precio - Number(descuento.descuento_monto);
+              montoDescuento = Number(descuento.descuento_monto);
             } else {
               return servicio;
             }
 
-            precioFinal = Math.max(
-              0,
-              Math.round((precioFinal + Number.EPSILON) * 100) / 100
+            montoDescuento = Math.min(
+              precio,
+              Math.max(0, montoDescuento)
             );
+
+            const precioFinal =
+              Math.round((precio - montoDescuento + Number.EPSILON) * 100) / 100;
 
             return {
               ...servicio,
@@ -281,18 +301,18 @@ export default {
               descuento_cliente: {
                 ...descuento,
                 precio_original: precio,
+                monto_descuento:
+                  Math.round(montoDescuento * 100) / 100,
                 precio_final: precioFinal,
               },
             };
           });
         } catch (error) {
           console.error(
-            "Error obteniendo los descuentos del cliente:",
+            "Error obteniendo los descuentos del profesional:",
             error
           );
-
-          // Si falla la consulta de descuentos, se conservan
-          // los servicios y sus precios originales.
+          // Si falla la consulta, se conservan los precios normales.
         }
       } catch (error) {
         console.error("Error obteniendo servicios:", error);
@@ -301,20 +321,38 @@ export default {
 
         this.$piaAlert.error(
           error.response?.data?.message ||
+            error.response?.data?.mensaje ||
             error.response?.data?.error ||
             error.message ||
             "No se pudieron obtener los servicios.",
-          {
-            title: "Error al obtener servicios",
-          }
+          { title: "Error al obtener servicios" }
         );
       } finally {
         this.overlay = false;
       }
     },
 
+
     formatoPrecio(valor) {
       return Number(valor || 0).toFixed(2);
+    },
+
+    ahorroServicio(servicio) {
+      const original = Number(servicio.precio || 0);
+      const final = Number(servicio.precio_final ?? servicio.precio ?? 0);
+      return Math.max(0, Math.round((original - final + Number.EPSILON) * 100) / 100);
+    },
+
+    porcentajeAhorro(servicio) {
+      const original = Number(servicio.precio || 0);
+      if (original <= 0) return 0;
+
+      const descuento = servicio.descuento_cliente || {};
+      if (descuento.descuento_porcentaje != null) {
+        return Number(Number(descuento.descuento_porcentaje).toFixed(2)).toString();
+      }
+
+      return Number(((this.ahorroServicio(servicio) / original) * 100).toFixed(2)).toString();
     },
 
     textoDescuento(descuento) {
@@ -656,6 +694,56 @@ export default {
   color: #197344;
   font-size: 11px;
   font-weight: 650;
+}
+
+
+/* ===================================================== */
+/* PRESENTACIÓN DE PROMOCIONES */
+/* ===================================================== */
+.servicio-item {
+  grid-template-columns: 82px minmax(0, 1fr);
+  padding: 10px;
+  border-radius: 18px;
+  gap: 12px;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.servicio-item.servicio-en-promocion {
+  border-color: #ffcbd0;
+  background: linear-gradient(135deg, #fff7f8 0%, #ffffff 100%);
+}
+
+.servicio-item.servicio-en-promocion.seleccionado {
+  border: 2px solid #078b88;
+  background: linear-gradient(135deg, #effdfa 0%, #fff7f8 100%);
+  box-shadow: 0 3px 12px rgba(7, 139, 136, 0.08);
+}
+
+.servicio-imagen { position: relative; width: 82px; height: 82px; border-radius: 13px; overflow: hidden; }
+.servicio-info { padding-right: 28px; }
+.promocion-badge {
+  display: inline-flex; align-items: center; align-self: flex-start; gap: 4px;
+  margin-bottom: 5px; padding: 4px 8px; border-radius: 999px;
+  background: #ff4658; color: #fff; font-size: 9px; font-weight: 800;
+  letter-spacing: .35px; line-height: 1.2;
+}
+.servicio-nombre { font-size: 15px; font-weight: 750; line-height: 1.22; color: #102653; }
+.servicio-duracion { display: flex; align-items: center; gap: 4px; margin-top: 5px; font-size: 12px; color: #71839b; }
+.servicio-precios { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; margin-top: 4px; }
+.precio-linea { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.servicio-precio { margin-top: 0; font-size: 18px; font-weight: 800; line-height: 1.15; color: #079b98; font-variant-numeric: tabular-nums; }
+.servicio-precio-original { color: #8190a3; font-size: 12px; font-weight: 500; text-decoration: line-through; white-space: nowrap; }
+.descuento-etiqueta { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-top: 0; padding: 5px 8px; border-radius: 8px; background: #dcf8e8; color: #087b59; font-size: 11px; font-weight: 750; line-height: 1.25; }
+.servicio-radio { right: 8px; top: 22px; transform: none; z-index: 1; }
+.servicio-descripcion { margin-top: 5px; font-size: 11px; line-height: 1.3; }
+
+@media (max-width: 380px) {
+  .servicio-item { grid-template-columns: 74px minmax(0, 1fr); column-gap: 10px; padding: 8px; }
+  .servicio-imagen { width: 74px; height: 78px; }
+  .servicio-info { padding-right: 24px; }
+  .servicio-nombre { font-size: 14px; }
+  .servicio-precio { font-size: 16px; }
+  .descuento-etiqueta { font-size: 10px; padding: 4px 6px; }
 }
 
 </style>

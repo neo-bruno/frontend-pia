@@ -21,15 +21,23 @@
     <!-- =========================
            TITULO
       ========================== -->
+    <!-- PERSONAJE PIA -->
+    <div class="pia-character">
+      <img
+        src="/images/pia/pia-character.png"
+        alt="PIA, tu asistente personal"
+      />
+    </div>
+
     <div class="login-title">
-      ¡Hola! 👋
+      ¡Bienvenido a PIA!
     </div>
 
     <div class="login-subtitle">
-      Ingresa tu teléfono
-      <br>
-      para continuar
+      <p class="my-0">Tu asistente personal de belleza y bienestar.</p> 
+      
     </div>
+    <p class="text-primary login-subtitle">Ingresa tu teléfono para continuar.</p>
 
     <!-- =========================
            FORMULARIO
@@ -700,7 +708,7 @@ export default {
 
   margin-top: 10px;
 
-  margin-bottom: 32px;
+  margin-bottom: 12px;
 
   letter-spacing: -1px;
 
@@ -711,31 +719,19 @@ export default {
 ===================================================== */
 
 .login-title {
-
   text-align: center;
-
-  font-size: 25px;
-
+  font-size: 23px;
   font-weight: 700;
-
   color: #0f172a;
-
   margin-bottom: 12px;
-
 }
 
 .login-subtitle {
-
   text-align: center;
-
-  font-size: 15px;
-
-  line-height: 1.45;
-
+  font-size: 14px;
+  line-height: 1.5;
   color: #64748b;
-
-  margin-bottom: 28px;
-
+  margin-bottom: 18px;
 }
 
 /* =====================================================
@@ -1150,5 +1146,41 @@ export default {
     0 15px 40px rgba(0, 0, 0, 0.18);
 
   box-sizing: border-box;
+}
+
+.pia-character {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: -8px;
+  margin-bottom: 8px;
+}
+
+.pia-character img {
+  display: block;
+  width: 112px;
+  height: 112px;
+  object-fit: contain;
+  object-position: center;
+}
+
+.login-card {
+  padding-top: 26px;
+}
+
+.login-title {
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0px;
+}
+
+.login-subtitle {
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #64748b;
+  margin-bottom: 0px;  
 }
 </style>

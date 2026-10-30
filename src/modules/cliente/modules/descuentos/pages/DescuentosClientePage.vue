@@ -73,7 +73,7 @@
       <!-- LISTA -->
       <section class="descuentos-lista">
 
-        <article v-for="descuento in descuentosPorCategoria(tabSeleccionada)" :key="descuento.asignacion_id" class="descuento-card" @click="verDetalle(descuento)">
+        <article v-for="descuento in descuentosPorCategoria(tabSeleccionada)" :key="`${descuento.tipo_descuento}-${descuento.descuento_servicio_id}`" class="descuento-card" @click="verDetalle(descuento)">
 
           <!-- IMAGEN -->
           <div class="descuento-imagen">

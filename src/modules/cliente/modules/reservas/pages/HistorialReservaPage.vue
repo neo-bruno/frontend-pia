@@ -143,9 +143,7 @@
 </template>
 
 <script>
-import {
-  getReservations
-} from "../services/reserva.api";
+import { getReservationHistory } from "../services/reserva.api";
 
 export default {
   name: "HistorialReservasPage",
@@ -195,19 +193,10 @@ export default {
       this.error = null;
 
       try {
-        const response = await getReservations();
+        const response = await getReservationHistory();
+        const data = response?.data?.data?? response?.data?? [];
 
-        console.log(
-          "RESPUESTA HISTORIAL:",
-          JSON.stringify(response?.data, null, 2)
-        );
-
-        const data =
-          response?.data?.data??
-          response?.data?? [];
-
-        const lista = Array.isArray(data) ?
-          data :
+        const lista = Array.isArray(data) ? data :
           (
             data?.reservas ||
             data?.rows ||
@@ -219,10 +208,7 @@ export default {
         });
 
       } catch (error) {
-        console.error(
-          "ERROR CARGANDO HISTORIAL:",
-          error
-        );
+        console.error("ERROR CARGANDO HISTORIAL:", error);
 
         this.error =
           error?.response?.data?.message ||

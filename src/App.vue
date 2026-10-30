@@ -1,5 +1,7 @@
 <template>
-<router-view />
+ <v-app>
+    <RouterView />
+  </v-app>
 
 <PiaAlert />
 </template>

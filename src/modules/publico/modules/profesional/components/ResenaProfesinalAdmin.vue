@@ -48,7 +48,7 @@
 
     <!-- LISTA DE RESEÑAS -->
     <div v-if="resenas.length" class="lista-resenas">
-      <div v-for="resena in resenas" :key="resena.id" class="resena-card">
+      <div v-for="resena in resenas" :key="resena.id" class="resena-card" role="button" tabindex="0" @click="abrirDetalleResena(resena)" @keydown.enter="abrirDetalleResena(resena)">
         <div class="resena-header">
           <div class="avatar-cliente">
             <img v-if="resena.cliente_foto" :src="getFileUrl(resena.cliente_foto)" :alt="resena.cliente_nombre || 'Cliente'" />
@@ -107,6 +107,79 @@
     </div>
   </div>
 </div>
+
+<v-bottom-sheet v-model="dialogDetalleResena">
+  <v-card class="sheet-resena">
+    <div class="sheet-indicador"></div>
+
+    <v-card-title class="d-flex align-center justify-space-between">
+      <span>Reseña del cliente</span>
+      <v-btn
+        icon="mdi-close"
+        variant="text"
+        size="small"
+        aria-label="Cerrar reseña"
+        @click="dialogDetalleResena = false"
+      />
+    </v-card-title>
+
+    <v-card-text v-if="resenaSeleccionada">
+      <div class="d-flex align-center ga-3 mb-4">
+        <v-avatar color="blue-grey-lighten-3" size="48">
+          <v-img
+            v-if="resenaSeleccionada.cliente_foto"
+            :src="getFileUrl(resenaSeleccionada.cliente_foto)"
+            cover
+          />
+          <span v-else>
+            {{ inicialCliente(resenaSeleccionada.cliente_nombre) }}
+          </span>
+        </v-avatar>
+
+        <div>
+          <div class="font-weight-bold">
+            {{ resenaSeleccionada.cliente_nombre || 'Cliente' }}
+          </div>
+          <div class="text-caption text-medium-emphasis">
+            {{ formatearFecha(resenaSeleccionada.fecha || resenaSeleccionada.created_at) }}
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex align-center mb-4">
+        <v-rating
+          :model-value="Number(resenaSeleccionada.puntaje || 0)"
+          color="amber-darken-1"
+          density="compact"
+          half-increments
+          readonly
+        />
+        <span class="ml-2 font-weight-bold">
+          {{ Number(resenaSeleccionada.puntaje || 0).toFixed(1) }}/5
+        </span>
+      </div>
+
+      <h3 v-if="resenaSeleccionada.titulo" class="text-subtitle-1 mb-2">
+        {{ resenaSeleccionada.titulo }}
+      </h3>
+
+      <p class="detalle-comentario">
+        {{ resenaSeleccionada.observacion || 'El cliente no escribió un comentario.' }}
+      </p>
+    </v-card-text>
+
+    <v-card-actions class="pa-4 pt-0">
+      <v-btn
+        block
+        color="teal"
+        variant="flat"
+        @click="dialogDetalleResena = false"
+      >
+        Cerrar
+      </v-btn>
+    </v-card-actions>
+  </v-card>
+</v-bottom-sheet>
 </template>
 
 <script>
@@ -138,6 +211,8 @@ export default {
         2: 0,
         1: 0,
       },
+      dialogDetalleResena: false,
+      resenaSeleccionada: null,
     }
   },
 
@@ -188,6 +263,10 @@ export default {
   },
 
   methods: {
+    abrirDetalleResena(resena) {
+      this.resenaSeleccionada = resena;
+      this.dialogDetalleResena = true;
+    },
     async cargarResenas() {
       if (!this.profesionalId) {
         this.resenas = []
@@ -537,5 +616,38 @@ export default {
   .promedio {
     font-size: 30px;
   }
+}
+.resena-card {
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.resena-card:hover {
+  border-color: #16a6a0;
+  box-shadow: 0 3px 12px rgba(22, 166, 160, 0.10);
+}
+
+.sheet-resena {
+  padding-bottom: env(safe-area-inset-bottom);
+  border-radius: 22px 22px 0 0 !important;
+}
+
+.sheet-indicador {
+  width: 42px;
+  height: 4px;
+  border-radius: 10px;
+  background: #cbd5e1;
+  margin: 10px auto 4px;
+}
+
+.detalle-comentario {
+  color: #3f536b;
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f5f8fb;
 }
 </style>

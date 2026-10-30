@@ -2,7 +2,7 @@
 <div class="agenda-page">
   <section class="agenda-heading">
     <div class="agenda-heading-icon">
-      <v-icon size="30">mdi-calendar-month-outline</v-icon>
+      <v-icon color="primary" size="30">mdi-calendar-month-outline</v-icon>
     </div>
     <div>
       <h1>Agenda</h1>
@@ -188,12 +188,12 @@
           </strong>
 
           <span v-if="reservaSeleccionada?.cliente?.telefono" class="sheet-dato-contacto">
-            <v-icon size="17">mdi-phone-outline</v-icon>
+            <v-icon color="primary" size="17">mdi-phone-outline</v-icon>
             {{ reservaSeleccionada.cliente.telefono }}
           </span>
 
           <span v-if="reservaSeleccionada?.cliente?.email" class="sheet-dato-contacto">
-            <v-icon size="17">mdi-email-outline</v-icon>
+            <v-icon color="primary" size="17">mdi-email-outline</v-icon>
             {{ reservaSeleccionada.cliente.email }}
           </span>
         </div>
@@ -220,24 +220,87 @@
           <div class="sheet-servicio-meta">
 
             <strong v-if="reservaSeleccionada?.servicio?.duracion" class="sheet-meta-item">
-              <v-icon size="17">mdi-clock-outline</v-icon>
-
-              {{ formatearDuracion(
-                Number(reservaSeleccionada.servicio.duracion)
-              ) }}
+              <v-icon color="primary" size="17">mdi-clock-outline</v-icon>
+              {{ formatearDuracion(Number(reservaSeleccionada.servicio.duracion)) }}
             </strong>
 
-            <strong v-if="reservaSeleccionada?.servicio?.precio !== null &&
-                     reservaSeleccionada?.servicio?.precio !== undefined" class="sheet-meta-item">
-              <v-icon size="17">mdi-cash"></v-icon>
-
-              Bs.-
-              {{ Number(
-                reservaSeleccionada.servicio.precio
+            <strong class="sheet-meta-item">
+              <v-icon color="primary" size="17">mdi-cash</v-icon>
+              Bs. {{ Number(
+                reservaSeleccionada.precio_aplicable ??
+                reservaSeleccionada.servicio?.precio ??
+                0
               ).toFixed(2) }}
             </strong>
 
           </div>
+        </div>
+      </div>
+
+        <!-- =================================================
+      RESUMEN FINANCIERO DE LA RESERVA
+      ================================================= -->
+      <div class="sheet-finanzas">
+        <div class="sheet-finanzas-titulo">
+          <v-icon color="primary" size="19">mdi-receipt-text-outline</v-icon>
+          Detalle del pago
+        </div>
+
+        <div class="sheet-finanzas-fila">
+          <span>Precio original</span>
+          <strong>
+            Bs. {{ Number(
+              reservaSeleccionada.precio_original ??
+              reservaSeleccionada.servicio?.precio ??
+              0
+            ).toFixed(2) }}
+          </strong>
+        </div>
+
+        <div
+          v-if="Number(reservaSeleccionada.monto_descuento ?? 0) > 0"
+          class="sheet-finanzas-fila descuento"
+        >
+          <span>Descuento</span>
+          <strong>
+            − Bs. {{ Number(
+              reservaSeleccionada.monto_descuento
+            ).toFixed(2) }}
+          </strong>
+        </div>
+
+        <div class="sheet-finanzas-fila">
+          <span>Precio final</span>
+          <strong>
+            Bs. {{ Number(
+              reservaSeleccionada.precio_aplicable ??
+              reservaSeleccionada.servicio?.precio ??
+              0
+            ).toFixed(2) }}
+          </strong>
+        </div>
+
+        <div class="sheet-finanzas-fila pagado">
+          <span>Adelanto / pagado</span>
+          <strong>
+            Bs. {{ Number(
+              reservaSeleccionada.monto_pagado ?? 0
+            ).toFixed(2) }}
+          </strong>
+        </div>
+
+        <div class="sheet-finanzas-saldo">
+          <span>Saldo pendiente</span>
+          <strong>
+            Bs. {{ Number(
+              reservaSeleccionada.saldo ??
+              (
+                Number(reservaSeleccionada.precio_aplicable ??
+                  reservaSeleccionada.servicio?.precio ?? 0) -
+                Number(reservaSeleccionada.monto_pagado ?? 0)
+              )
+            ).toFixed(2) }}
+          </strong>
         </div>
       </div>
 
@@ -246,17 +309,15 @@
            ================================================= -->
       <div class="sheet-fecha-hora">
 
-        <!-- <div class="sheet-fecha">
-          <v-icon size="23">mdi-calendar-outline</v-icon>
-
+        <div class="sheet-fecha">
+          <v-icon color="primary" size="23">mdi-calendar-outline</v-icon>
           <span>
             {{ formatearFechaLarga(reservaSeleccionada?.fecha) }}
           </span>
-        </div> -->
+        </div>
 
         <div class="sheet-hora">
-          <v-icon size="23">mdi-clock-outline</v-icon>
-
+          <v-icon color="primary" size="23">mdi-clock-outline</v-icon>
           <strong>
             {{ reservaSeleccionada?.hora_inicio?.slice(0, 5) }}
             -
@@ -549,6 +610,9 @@ import {
   cancelarBloqueo,
   getBloqueos
 } from "../services/bloqueo.api";
+
+import dayjs from "dayjs";
+import "dayjs/locale/es";
 
 export default {
   name: "AgendaAdminPage",
@@ -1151,14 +1215,14 @@ export default {
     formatearFechaLarga(fecha) {
       if (!fecha) return "";
 
-      const fechaLocal = new Date(`${fecha}T12:00:00`);
+      const fechaFormateada = dayjs(fecha);
 
-      return fechaLocal.toLocaleDateString("es-ES", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }).replace(/^./, (letra) => letra.toUpperCase());
+      if (!fechaFormateada.isValid()) return "Fecha inválida";
+
+      return fechaFormateada
+        .locale("es")
+        .format("dddd D [de] MMMM [de] YYYY")
+        .replace(/^./, (letra) => letra.toUpperCase());
     },
 
     crearReserva(bloque = null) {
@@ -2005,16 +2069,12 @@ export default {
   line-height: 1;
 }
 
-.sheet-meta-item .v-icon {
-  color: #526b82;
-}
-
 /* =====================================================
    FECHA Y HORA
    ===================================================== */
 
 .sheet-fecha-hora {
-  padding: 16px 0;
+  padding: 5px 0;
   border-bottom: 1px solid #e3eaf0;
 }
 
@@ -2029,13 +2089,14 @@ export default {
 }
 
 .sheet-fecha {
-  margin-bottom: 15px;
+  margin-bottom: 5px;
+  margin-top: 5px;
 }
 
 .sheet-fecha .v-icon,
 .sheet-hora .v-icon {
   flex: 0 0 auto;
-  color: #526b82;
+  // color: #526b82;
 }
 
 /* =====================================================
@@ -2582,5 +2643,66 @@ export default {
   .pia-confirm-time {
     font-size: 19px;
   }
+}
+
+.sheet-finanzas {
+  padding: 15px 10px;
+  border-bottom: 1px solid #e3eaf0;
+}
+
+.sheet-finanzas-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+  color: #173e61;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.sheet-finanzas-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 0;
+  color: #62798d;
+  font-size: 13px;
+}
+
+.sheet-finanzas-fila strong {
+  color: #173e61;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sheet-finanzas-fila.descuento,
+.sheet-finanzas-fila.descuento strong {
+  color: #16845b;
+}
+
+.sheet-finanzas-fila.pagado strong {
+  color: #16845b;
+}
+
+.sheet-finanzas-saldo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 13px;
+  border: 1px solid #b9e7df;
+  border-radius: 12px;
+  background: #edfaf7;
+  color: #087f72;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.sheet-finanzas-saldo strong {
+  font-size: 17px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 </style>

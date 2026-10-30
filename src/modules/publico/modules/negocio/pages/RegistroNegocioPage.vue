@@ -96,8 +96,45 @@
 
         <v-form ref="formNegocio" class="mt-6" @submit.prevent>
 
-          <!-- TIPO DE NEGOCIO -->          
-          <v-select v-model="form.negocio.tipo_negocio_id" label="(*) Tipo de negocio" placeholder="Selecciona el tipo de negocio" :items="tiposNegocio" item-title="nombre" item-value="id" variant="outlined" density="comfortable" :rules="[reglas.requerido]" />
+          <!-- TIPO DE NEGOCIO -->                    
+          <v-select v-model="form.negocio.tipo_negocio_id" label="(*) Tipo de negocio" placeholder="Selecciona el tipo de negocio" :items="tiposNegocio"
+            item-title="nombre"
+            item-value="id"
+            variant="outlined"
+            density="comfortable"
+            :rules="[reglas.requerido]"
+          >
+            <!-- Opciones desplegadas -->            
+            <template #item="{ props, item }">
+              <v-list-item v-bind="props" :title="undefined" density="comfortable" min-height="52">
+                <template #prepend>
+                  <v-avatar color="primary" variant="tonal" size="34">
+                    <v-icon size="20">
+                      {{ item.icono || 'mdi-store-outline' }}
+                    </v-icon>
+                  </v-avatar>
+                </template>
+
+                <div class="tipo-negocio-nombre">
+                  {{ item.nombre }}
+                </div>
+              </v-list-item>
+            </template>
+
+
+            <!-- Tipo seleccionado -->            
+            <template #selection="{ item }">
+              <div class="tipo-negocio-seleccion">
+                <v-icon size="20" color="primary">
+                  {{ item.icono || 'mdi-store-outline' }}
+                </v-icon>
+
+                <span>{{ item.nombre }}</span>
+              </div>
+            </template>
+
+          </v-select>
+
 
           <div class="agregar-tipo">
 
@@ -540,53 +577,196 @@
     </v-row>
 
   </div>
-
+ 
   <!-- ================================================= -->
   <!-- DIALOGO - NUEVO TIPO DE NEGOCIO -->
   <!-- ================================================= -->
 
-  <v-dialog v-model="dialogoTipoNegocio" max-width="450">
+  <v-dialog
+    v-model="dialogoTipoNegocio"
+    max-width="450"
+    width="calc(100% - 24px)"
+    scrollable
+  >
+    <v-card class="dialogo-tipo-card">
 
-    <v-card>
+      <!-- ENCABEZADO -->
+      <v-card-title class="dialogo-tipo-header">
+        <div class="dialogo-tipo-header-icon">
+          <v-icon size="28">mdi-store-plus-outline</v-icon>
+        </div>
 
-      <v-card-title class="pa-5 bg-primary">
-        Nuevo tipo de negocio
+        <div class="flex-grow-1">
+          <div class="text-h6 font-weight-bold">
+            Nuevo tipo de negocio
+          </div>
+
+          <div class="dialogo-tipo-subtitulo">
+            Personaliza la categoría de tu negocio
+          </div>
+        </div>
+
+        <v-btn
+          icon="mdi-close"
+          variant="text"
+          color="white"
+          size="small"
+          aria-label="Cerrar"
+          @click="cerrarDialogoTipoNegocio"
+        />
       </v-card-title>
 
-      <v-card-text>
+      <!-- FORMULARIO -->
+      <v-card-text class="dialogo-tipo-contenido">
 
-        <v-form ref="formTipoNegocio" @submit.prevent>
+        <v-form
+          ref="formTipoNegocio"
+          @submit.prevent
+        >
+          <!-- NOMBRE -->
+          <v-text-field
+            v-model="nuevoTipoNegocio.nombre"
+            autofocus
+            label="(*) Nombre"
+            placeholder="Ej. Barbería"
+            prepend-inner-icon="mdi-store-outline"
+            variant="outlined"
+            density="comfortable"
+            maxlength="100"
+            counter="100"
+            :rules="[reglas.requerido, reglas.tipoNombre]"
+          />
 
-          <v-text-field v-model="nuevoTipoNegocio.nombre" autofocus label="(*) Nombre" placeholder="Ej. Barbería" variant="outlined" density="comfortable" maxlength="100" counter="100" :rules="[reglas.requerido, reglas.tipoNombre]" />
+          <!-- DESCRIPCIÓN -->
+          <v-textarea
+            v-model="nuevoTipoNegocio.descripcion"
+            label="Descripción"
+            placeholder="Describe el tipo de negocio"
+            prepend-inner-icon="mdi-text"
+            variant="outlined"
+            density="comfortable"
+            maxlength="255"
+            counter="255"
+            rows="3"
+            auto-grow
+          />
 
-          <v-textarea v-model="nuevoTipoNegocio.descripcion" label="Descripción" placeholder="Describe el tipo de negocio" variant="outlined" density="comfortable" maxlength="255" counter="255"/>
+          <!-- SELECCIÓN DE ICONO -->
+          <div class="selector-iconos-negocio">
 
+            <div class="selector-iconos-titulo">
+              <div class="selector-iconos-titulo-icono">
+                <v-icon size="20">mdi-palette-outline</v-icon>
+              </div>
+
+              <div>
+                <div class="text-subtitle-1 font-weight-bold">
+                  Elige un icono
+                </div>
+
+                <div class="text-caption text-medium-emphasis">
+                  Representará a este tipo de negocio
+                </div>
+              </div>
+            </div>
+
+            <v-item-group
+              v-model="nuevoTipoNegocio.icono"
+              mandatory
+            >
+              <div class="iconos-negocio-grid">
+
+                <v-item
+                  v-for="icono in iconosNegocio"
+                  :key="icono.value"
+                  :value="icono.value"
+                  v-slot="{ selected, toggle }"
+                >
+                  <v-card
+                    class="icono-negocio-card"
+                    :class="{
+                      'icono-negocio-card--selected': selected
+                    }"
+                    variant="flat"
+                    rounded="xl"
+                    @click="toggle"
+                  >
+                    <div class="icono-negocio-figura">
+                      <v-icon
+                        size="27"
+                        :icon="icono.value"
+                      />
+                    </div>
+
+                    <span class="icono-negocio-label">
+                      {{ icono.label }}
+                    </span>
+
+                    <v-icon
+                      v-if="selected"
+                      class="icono-negocio-check"
+                      icon="mdi-check-circle"
+                      size="17"
+                    />
+                  </v-card>
+                </v-item>
+
+              </div>
+            </v-item-group>
+
+            <!-- ICONO SELECCIONADO -->
+            <div
+              v-if="nuevoTipoNegocio.icono"
+              class="icono-negocio-seleccionado"
+            >
+              <v-icon color="primary" size="20">
+                {{ nuevoTipoNegocio.icono }}
+              </v-icon>
+
+              <span>
+                Icono seleccionado:
+                <strong>{{ nuevoTipoNegocio.icono }}</strong>
+              </span>
+            </div>
+
+          </div>
         </v-form>
 
       </v-card-text>
 
-      <v-card-actions class="px-5 pb-5">
+      <!-- BOTONES -->
+      <v-card-actions class="dialogo-tipo-acciones">
 
-        <v-spacer />
-
-        <v-btn prepend-icon="mdi-close" color="error" variant="outlined" @click="cerrarDialogoTipoNegocio">
+        <v-btn
+          prepend-icon="mdi-close"
+          color="error"
+          variant="outlined"
+          @click="cerrarDialogoTipoNegocio"
+        >
           Cancelar
         </v-btn>
 
-        <v-btn variant="elevated" class="ms-4" prepend-icon="mdi-content-save" append-icon="mdi-chevron-right" color="primary" @click="guardarTipoNegocio">
+        <v-spacer />
+
+        <v-btn
+          variant="elevated"
+          class="btn-guardar-tipo"
+          prepend-icon="mdi-content-save"
+          color="primary"
+          @click="guardarTipoNegocio"
+        >
           Guardar
         </v-btn>
 
       </v-card-actions>
 
     </v-card>
-
   </v-dialog>
+
 
   <!-- ================================================= -->
   <!-- DIALOGO - NUEVO TIPO DE PROFESIONAL -->
   <!-- ================================================= -->
-
   <v-dialog v-model="dialogoTipoProfesional" max-width="450">
 
     <v-card>
@@ -635,7 +815,8 @@
 import { urlQrGerencia } from '@/utils/ayuda';
 import { getManagement } from '../../gerencia/services/gerencia.api';
 import { getProfessionalsTypes } from '../../profesional/services/profesional.api';
-import { getBusinessTypes, saveBusinessProfession } from '../services/negocio.api';
+import { saveBusinessProfession } from '../services/negocio.api';
+import { getBusinessTypes } from '../services/tipoNegocio.api';
 
 export default {
   name: "RegistroNegocioPage",
@@ -856,6 +1037,25 @@ export default {
       // ============================================
       tiposNegocio: [],
       tiposProfesional: [],
+      
+      iconosNegocio: [
+        { label: "Salón", value: "mdi-face-woman" },
+        { label: "Barbería", value: "mdi-content-cut" },
+        { label: "Belleza", value: "mdi-star-four-points" },
+        { label: "Spa", value: "mdi-spa" },
+        { label: "Uñas", value: "mdi-palette" },
+        { label: "Pestañas", value: "mdi-eye-outline" },
+        { label: "Estética", value: "mdi-face-woman" },
+        { label: "Cosmética", value: "mdi-flower" },
+        { label: "Depilación", value: "mdi-flash" },
+        { label: "Masajes", value: "mdi-hand-heart" },
+        { label: "Tatuajes", value: "mdi-needle" },
+        { label: "Tienda", value: "mdi-store" },
+        { label: "Academia", value: "mdi-school" },
+        { label: "Bienestar", value: "mdi-heart-pulse" },
+        { label: "Cabello", value: "mdi-water" },
+        { label: "Otros", value: "mdi-shape-outline" },
+      ],
 
       departamentos: [
         "Cochabamba",
@@ -891,6 +1091,7 @@ export default {
         id: 0,
         nombre: "",
         descripcion: "",
+        icono: "mdi-store-outline",
       },
 
       nuevoTipoProfesional: {
@@ -1146,11 +1347,10 @@ export default {
       // ------------------------------------------
 
       const nuevoTipo = {
-        id: this.obtenerSiguienteId(
-          this.tiposNegocio
-        ),
-
+        id: this.obtenerSiguienteId(this.tiposNegocio),
         nombre: datos.nombre,
+        descripcion: datos.descripcion,
+        icono: this.nuevoTipoNegocio.icono || "mdi-store-outline",
       };
 
       this.tiposNegocio.push(nuevoTipo);
@@ -1801,4 +2001,365 @@ export default {
     flex: 1;
   }
 }
+
+.tipo-negocio-nombre {
+  font-size: 13px;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .tipo-negocio-nombre {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+}
+
+.tipo-negocio-seleccion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.tipo-negocio-seleccion span {
+  min-width: 0;
+}
+
+.iconos-negocio-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.icono-negocio-card {
+  min-width: 0;
+  min-height: 82px;
+  padding: 10px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+}
+
+.icono-negocio-label {
+  display: block;
+  width: 100%;
+  font-size: 11px;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+@media (max-width: 400px) {
+  .iconos-negocio-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .icono-negocio-card {
+    min-height: 76px;
+  }
+}
+
+/* ================================================= */
+/* DIALOGO NUEVO TIPO DE NEGOCIO                    */
+/* ================================================= */
+
+.dialogo-tipo-card {
+  overflow: hidden;
+  border-radius: 18px !important;
+  background: #ffffff;
+  box-shadow: 0 16px 45px rgb(20 50 65 / 18%);
+}
+
+/* ================================================= */
+/* ENCABEZADO                                        */
+/* ================================================= */
+
+.dialogo-tipo-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #008f8c, #12aaa2);
+  white-space: normal;
+}
+
+.dialogo-tipo-header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  color: #ffffff;
+  background: rgb(255 255 255 / 18%);
+}
+
+.dialogo-tipo-subtitulo {
+  margin-top: 3px;
+  color: rgb(255 255 255 / 85%);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+/* ================================================= */
+/* CONTENIDO                                         */
+/* ================================================= */
+
+.dialogo-tipo-contenido {
+  padding: 22px 20px 18px;
+  background: #ffffff;
+}
+
+/* ================================================= */
+/* SELECTOR DE ICONOS                                */
+/* ================================================= */
+
+.selector-iconos-negocio {
+  margin-top: 8px;
+  padding: 16px;
+  border: 1px solid #e5eeee;
+  border-radius: 16px;
+  background: #f8fbfb;
+}
+
+.selector-iconos-titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.selector-iconos-titulo-icono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  color: #008f8c;
+  background: #def5f2;
+}
+
+/* ================================================= */
+/* CUADRICULA                                        */
+/* ================================================= */
+
+.iconos-negocio-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+/* ================================================= */
+/* TARJETAS DE ICONOS                                */
+/* ================================================= */
+
+.icono-negocio-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  min-height: 92px;
+  padding: 12px 5px;
+  overflow: hidden;
+  border: 1px solid #e1e9ed;
+  background: #ffffff;
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.icono-negocio-card:hover {
+  border-color: #65c9c2;
+  background: #f0fbf9;
+  transform: translateY(-2px);
+}
+
+/* FIGURA DEL ICONO */
+
+.icono-negocio-figura {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  color: #008f8c;
+  background: #e1f5f2;
+
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+}
+
+/* TEXTO DE CADA ICONO */
+
+.icono-negocio-label {
+  display: block;
+  width: 100%;
+  color: #344b5e;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+/* ================================================= */
+/* ICONO SELECCIONADO                                */
+/* ================================================= */
+
+.icono-negocio-card--selected {
+  border: 2px solid #009c95;
+  background: #e9f9f6;
+  box-shadow: 0 4px 12px rgb(0 143 140 / 12%);
+}
+
+.icono-negocio-card--selected .icono-negocio-figura {
+  color: #ffffff;
+  background: #009c95;
+}
+
+.icono-negocio-card--selected .icono-negocio-label {
+  color: #007d79;
+  font-weight: 700;
+}
+
+.icono-negocio-check {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  color: #009c95;
+}
+
+/* ================================================= */
+/* RESUMEN DEL ICONO SELECCIONADO                    */
+/* ================================================= */
+
+.icono-negocio-seleccionado {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid #d7efeb;
+  border-radius: 10px;
+  color: #405966;
+  background: #effaf8;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.icono-negocio-seleccionado strong {
+  color: #007d79;
+  font-weight: 600;
+}
+
+/* ================================================= */
+/* ACCIONES                                          */
+/* ================================================= */
+
+.dialogo-tipo-acciones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px 20px;
+  border-top: 1px solid #edf1f3;
+  background: #f8fbfc;
+}
+
+.dialogo-tipo-acciones .v-btn {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+}
+
+.btn-guardar-tipo {
+  box-shadow: 0 3px 8px rgb(0 143 140 / 18%);
+}
+
+/* ================================================= */
+/* RESPONSIVE                                        */
+/* ================================================= */
+
+@media (max-width: 400px) {
+  .dialogo-tipo-header {
+    gap: 10px;
+    padding: 16px;
+  }
+
+  .dialogo-tipo-header-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .dialogo-tipo-contenido {
+    padding: 16px 14px;
+  }
+
+  .selector-iconos-negocio {
+    padding: 12px;
+  }
+
+  .iconos-negocio-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .icono-negocio-card {
+    min-height: 82px;
+    padding: 9px 4px;
+  }
+
+  .icono-negocio-figura {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+  }
+
+  .icono-negocio-label {
+    font-size: 10px;
+  }
+
+  .dialogo-tipo-acciones {
+    gap: 6px;
+    padding: 12px 14px 16px;
+  }
+
+  .dialogo-tipo-acciones .v-btn {
+    font-size: 12px;
+  }
+}
+
 </style>

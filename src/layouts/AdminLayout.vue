@@ -4,9 +4,8 @@
   <!-- =========================
          MENÚ LATERAL
     ========================== -->
-
   <v-navigation-drawer v-model="drawer" :permanent="!esMovil" :temporary="esMovil" width="280" class="admin-drawer">
-
+    
     <!-- Logo / encabezado -->
     <div class="drawer-brand pa-5">
       <div class="d-flex align-center">
@@ -132,23 +131,14 @@
       <!-- Ayuda y soporte: acceso secundario -->
       <v-list-item prepend-icon="mdi-lifebuoy" title="Ayuda y soporte" rounded="lg" @click="abrirAyuda" />
 
+      <v-divider class="my-3" />
+      
+      <!-- =========================
+             CERRAR SESIÓN
+        ========================== -->
+      <v-list-item prepend-icon="mdi-logout" title="Cerrar sesión" rounded="lg" @click="cerrarSesion"/>
+      
     </v-list>
-
-    <!-- =========================
-           CERRAR SESIÓN
-      ========================== -->
-
-    <template #append>
-
-      <div class="pa-3">
-
-        <v-divider class="mb-3" />
-
-        <v-list-item prepend-icon="mdi-logout" title="Cerrar sesión" rounded="lg" @click="cerrarSesion" />
-
-      </div>
-
-    </template>
 
   </v-navigation-drawer>
 
@@ -311,7 +301,7 @@ export default {
       socket: null,
     };
   },
-
+  
   computed: {
 
     authStore() {
@@ -653,5 +643,20 @@ export default {
   .admin-drawer :deep(.v-list-item) {
     min-height: 44px;
   }
+}
+/* =========================================
+   SCROLL DEL MENÚ LATERAL PIA
+========================================= */
+
+.admin-drawer :deep(.v-navigation-drawer__content) {
+  height: 100% !important;
+  max-height: 100dvh !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  scrollbar-width: thin;
 }
 </style>
