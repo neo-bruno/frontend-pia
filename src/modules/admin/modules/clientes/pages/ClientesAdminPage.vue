@@ -568,11 +568,11 @@ export default {
     },
   },
 
-  mounted() {
+  async mounted() {
 
-    this.cargarClientes();
+    await this.cargarClientes();
 
-    this.cargarSegmentaciones()
+    await this.cargarSegmentaciones()
 
   },
 

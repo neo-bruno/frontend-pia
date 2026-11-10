@@ -1,6 +1,6 @@
 import AdminLayout from "@/layouts/AdminLayout.vue";
 // PRINCIPAL
-import InicioAdminPage from "../pages/InicioAdminPage.vue";
+import DashboarAdminPage from "../modules/dashboard/pages/DashboarAdminPage.vue";
 import AgendaAdminPage from "../modules/agenda/pages/AgendaAdminPage.vue";
 import ClientesAdminPage from "../modules/clientes/pages/ClientesAdminPage.vue";
 import HistorialAdminPage from "../modules/historial/pages/HistorialAdminPage.vue";
@@ -21,6 +21,7 @@ import descuentoServicioRoutes from "../modules/descuentos/routes";
 import PerfilAdminPage from "../modules/perfil/pages/PerfilAdminPage.vue";
 import MembresiaAdminPage from "../modules/membresia/pages/MembresiaAdminPage.vue";
 
+
 const routes = [
 	{
 		path: "/admin",
@@ -39,7 +40,7 @@ const routes = [
 			{
 				path: "",
 				name: "admin",
-				component: InicioAdminPage,
+				component: DashboarAdminPage,
 			},
 
 			{

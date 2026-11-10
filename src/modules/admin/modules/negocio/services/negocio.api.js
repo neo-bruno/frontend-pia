@@ -47,3 +47,7 @@ export function subirImagenesNegocio({ portada, logo }) {
 
 	return httpFiles().patch("/negocio-admin/mi-negocio/imagenes", formData);
 }
+
+export function getEstadoHorarioNegocio() {
+	return http().get("/negocio-admin/mi-negocio/estado-horario");
+}

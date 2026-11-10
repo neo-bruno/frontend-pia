@@ -12,8 +12,10 @@
       PIA
     </div>
 
-    <v-btn icon variant="text">
-      <v-icon>mdi-heart-outline</v-icon>
+    <v-btn icon variant="text" :disabled="procesandoFavorito" @click="toggleFavorito">
+      <v-icon :color="favorito ? '#079b99' : undefined">
+        {{ favorito ? 'mdi-heart' : 'mdi-heart-outline' }}
+      </v-icon>
     </v-btn>
 
   </div>
@@ -693,6 +695,8 @@
 
 </div>
 
+<LoginCliente v-model="dialogoLoginCliente" @login="clienteAutenticado"/>
+
 <!-- capa protectora de proceso -->
 <v-overlay :model-value="overlay" class="align-center justify-center" persistent>
   <v-progress-circular color="primary" size="64" indeterminate></v-progress-circular>
@@ -701,16 +705,19 @@
 </template>
 
 <script>
-import {
-  useReservaStore
-} from "@/stores/reserva.store";
-import {
-  getFileUrl
-} from "@/utils/ayuda";
+import { useReservaStore } from "@/stores/reserva.store";
+import { getFileUrl } from "@/utils/ayuda";
 import { confirmReservation } from "../services/reserva.api";
 import { verificarDescuentosPorServicio, validarCodigoDescuento } from "@/modules/cliente/modules/descuentos/services/descuentoCliente.api";
 
+import LoginCliente from "@/modules/publico/modules/cliente/components/LoginCliente.vue";
+import { getFavoritos, agregarFavorito, eliminarFavorito, } from "@/modules/cliente/modules/favoritos/services/favorito.api.js";
+
 export default {
+
+  components: {
+    LoginCliente,
+  },
 
   data() {
     return {
@@ -726,6 +733,11 @@ export default {
 
       consultandoDescuento: false,
       tieneDescuentoDisponible: false,
+
+      favorito: false,
+      favoritoPendiente: false,
+      procesandoFavorito: false,
+      dialogoLoginCliente: false,
 
       overlay: false,
     };
@@ -835,6 +847,7 @@ export default {
       immediate: true,
       handler() {
         this.consultarDescuentoDelServicio();
+        this.verificarFavorito();
       },
     },
 
@@ -866,6 +879,114 @@ export default {
         }
       );
 
+    },
+
+    // =====================================================
+    // FAVORITOS DEL PROFESIONAL
+    // =====================================================
+
+    async verificarFavorito() {
+      const token = localStorage.getItem("cliente_token");
+      const profesionalId = Number(this.reserva?.profesional?.id);
+
+      if (!token || !profesionalId) {
+        this.favorito = false;
+        return;
+      }
+
+      try {
+        const respuesta = await getFavoritos();
+        const datos = respuesta?.data?.data || {};
+
+        const favoritos = (datos.profesionales || []).map(
+          profesional => Number(profesional.id)
+        );
+
+        this.favorito = favoritos.includes(profesionalId);
+
+      } catch (error) {
+        console.error(
+          "Error al verificar favorito del profesional:",
+          error
+        );
+      }
+    },
+
+    async toggleFavorito() {
+      if (!localStorage.getItem("cliente_token")) {
+        this.favoritoPendiente = true;
+        this.dialogoLoginCliente = true;
+        return;
+      }
+
+      await this.actualizarFavorito();
+    },
+
+    async clienteAutenticado() {
+      this.dialogoLoginCliente = false;
+
+      if (this.favoritoPendiente) {
+        this.favoritoPendiente = false;
+        await this.actualizarFavorito();
+      } else {
+        await this.verificarFavorito();
+      }
+    },
+
+    async actualizarFavorito() {
+      if (this.procesandoFavorito || !this.reserva?.profesional?.id) {
+        return;
+      }
+
+      if (!localStorage.getItem("cliente_token")) {
+        this.favoritoPendiente = true;
+        this.dialogoLoginCliente = true;
+        return;
+      }
+
+      const profesionalId = Number(this.reserva.profesional.id);
+      const eraFavorito = this.favorito;
+
+      this.procesandoFavorito = true;
+
+      try {
+        if (eraFavorito) {
+          await eliminarFavorito("PROFESIONAL", profesionalId);
+        } else {
+          await agregarFavorito("PROFESIONAL", profesionalId);
+        }
+
+        this.favorito = !eraFavorito;
+
+        this.$piaAlert.success(
+          this.favorito
+            ? "Profesional agregado a favoritos."
+            : "Profesional eliminado de favoritos."
+        );
+
+      } catch (error) {
+        console.error(
+          "Error al actualizar favorito del profesional:",
+          error
+        );
+
+        if (error.response?.status === 401) {
+          this.favoritoPendiente = true;
+          this.dialogoLoginCliente = true;
+
+          this.$piaAlert.info(
+            "Tu sesión ha expirado. Inicia sesión nuevamente."
+          );
+        } else {
+          this.$piaAlert.error(
+            error.response?.data?.mensaje ||
+            "No se pudo actualizar el favorito."
+          );
+        }
+
+      } finally {
+        this.procesandoFavorito = false;
+      }
     },
 
     // =====================================================

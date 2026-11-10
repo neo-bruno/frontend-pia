@@ -67,15 +67,44 @@
           {{ negocio.descripcion }}
         </p>
 
+        <!-- CALIFICACIÓN + DISTANCIA -->
         <div class="calificacion-negocio">
-          <v-icon color="amber-darken-2" size="21">mdi-star</v-icon>
-          <strong>{{ formatoCalificacion(calificacionNegocio) }}</strong>
-          <span>({{ totalResenas }} reseñas)</span>
 
-          <span v-if="negocio.verificado" class="verificado">
-            <v-icon size="16">mdi-check-circle</v-icon>
-            Verificado
-          </span>
+          <div class="calificacion-datos">
+            <v-icon color="amber-darken-2" size="21">
+              mdi-star
+            </v-icon>
+
+            <strong>
+              {{ formatoCalificacion(calificacionNegocio) }}
+            </strong>
+
+            <span>({{ totalResenas }} reseñas)</span>
+
+            <span v-if="negocio.verificado" class="verificado">
+              <v-icon size="16">mdi-check-circle</v-icon>
+              Verificado
+            </span>
+          </div>
+
+          <!-- DISTANCIA -->
+          <div v-if="distanciaNegocio" class="distancia-negocio">
+            <v-icon size="18" color="primary">
+              mdi-map-marker-distance
+            </v-icon>
+            <strong>{{ distanciaNegocio }}</strong>
+          </div>
+
+        </div>
+
+        <!-- ESTADO ACTUAL -->
+        <div class="estado-negocio" :class="{
+            abierto: estadoActualNegocio.abierto === true,
+            cerrado: estadoActualNegocio.abierto === false,
+            'sin-horario': estadoActualNegocio.abierto === null
+          }">
+          <span class="estado-punto"></span>
+          {{ estadoActualNegocio.texto }}
         </div>
       </div>
 
@@ -102,11 +131,16 @@
           <span>Compartir</span>
         </button>
 
-        <button class="accion" @click="favorito = !favorito">
+        <button class="accion" @click="toggleFavorito" :disabled="procesandoFavorito">
           <span class="accion-icono">
-            <v-icon>{{ favorito?'mdi-heart' : 'mdi-heart-outline' }}</v-icon>
+            <v-icon>
+              {{ favorito ? 'mdi-heart' : 'mdi-heart-outline' }}
+            </v-icon>
           </span>
-          <span>{{ favorito?'Guardado' : 'Guardar' }}</span>
+
+          <span>
+            {{ favorito ? 'Guardado' : 'Guardar' }}
+          </span>
         </button>
       </div>
 
@@ -369,14 +403,24 @@
   </v-card>
 </v-bottom-sheet>
 
+<!-- ACCESO DEL CLIENTE -->
+<LoginCliente v-model="dialogoLoginCliente" @login="clienteAutenticado"/>
+
 </template>
 
 <script>
 import { getBusinessBySlug } from '../services/negocio.api'
 import { getFileUrl } from '@/utils/ayuda.js'
+import { getFavoritos, agregarFavorito, eliminarFavorito, } from "../../../../cliente/modules/favoritos/services/favorito.api.js";
+
+import LoginCliente from "../../../modules/cliente/components/LoginCliente.vue";
 
 export default {
   name: 'PerfilNegocioPage',
+
+  components: {
+    LoginCliente,
+  },
 
   data() {
     return {
@@ -391,6 +435,12 @@ export default {
 
       dialogDetalleResena: false,
       resenaSeleccionada: null,
+
+      clienteUbicacion: null,
+
+      dialogoLoginCliente: false,
+      favoritoPendiente: false,
+      procesandoFavorito: false,
     }
   },
 
@@ -477,6 +527,127 @@ export default {
         this.resenas.length
       );
     },
+
+    // ==========================================
+    // ESTADO ACTUAL DEL NEGOCIO
+    // ==========================================
+    estadoActualNegocio() {
+      if (!this.horarios.length) {
+        return {
+          texto: "Horario no disponible",
+          abierto: null,
+        };
+      }
+
+      const ahora = new Date();
+
+      // JavaScript: domingo = 0.
+      const diaActual = ahora.getDay() || 7;
+      const minutoActual = ahora.getHours() * 60 + ahora.getMinutes();
+
+      const diaAnterior = diaActual === 1 ? 7 : diaActual - 1;
+
+      const convertirHora = (hora) => {
+        if (!hora) return null;
+
+        const partes = String(hora).slice(0, 5).split(":");
+
+        if (partes.length !== 2) return null;
+
+        const horas = Number(partes[0]);
+        const minutos = Number(partes[1]);
+
+        if (
+          !Number.isInteger(horas) ||
+          !Number.isInteger(minutos) ||
+          horas < 0 ||
+          horas > 23 ||
+          minutos < 0 ||
+          minutos > 59
+        ) {
+          return null;
+        }
+
+        return horas * 60 + minutos;
+      };
+
+      for (const horario of this.horarios) {
+        const dia = Number(horario.dia_semana);
+
+        const inicio = convertirHora(horario.hora_inicio);
+        const fin = convertirHora(horario.hora_fin);
+
+        if (inicio === null || fin === null || inicio === fin) {
+          continue;
+        }
+
+        // Horario correspondiente al día actual.
+        if (dia === diaActual) {
+          const dentroHorario =
+            inicio < fin
+              ? minutoActual >= inicio && minutoActual < fin
+              : minutoActual >= inicio || minutoActual < fin;
+
+          if (dentroHorario) {
+            return {
+              texto: "Abierto",
+              abierto: true,
+            };
+          }
+        }
+
+        // Considerar turnos que comenzaron ayer y terminan hoy.
+        if (dia === diaAnterior && inicio > fin) {
+          if (minutoActual < fin) {
+            return {
+              texto: "Abierto",
+              abierto: true,
+            };
+          }
+        }
+      }
+
+      return {
+        texto: "Cerrado",
+        abierto: false,
+      };
+    },
+
+    // ==========================================
+    // DISTANCIA CLIENTE - NEGOCIO
+    // ==========================================
+    distanciaNegocio() {
+      if (!this.clienteUbicacion || !this.tieneUbicacion) {
+        return null;
+      }
+
+      const lat1 = Number(this.clienteUbicacion.latitud);
+      const lon1 = Number(this.clienteUbicacion.longitud);
+      const lat2 = Number(this.negocio.latitud);
+      const lon2 = Number(this.negocio.longitud);
+
+      const rad = (grados) => grados * Math.PI / 180;
+
+      const diferenciaLat = rad(lat2 - lat1);
+      const diferenciaLon = rad(lon2 - lon1);
+
+      const a =
+        Math.sin(diferenciaLat / 2) ** 2 +
+        Math.cos(rad(lat1)) *
+          Math.cos(rad(lat2)) *
+          Math.sin(diferenciaLon / 2) ** 2;
+
+      const distancia = 6371 * 2 * Math.atan2(
+        Math.sqrt(a),
+        Math.sqrt(1 - a)
+      );
+
+      if (distancia < 1) {
+        return `${Math.round(distancia * 1000)} m`;
+      }
+
+      return `${distancia.toFixed(1)} km`;
+    },
   },
 
   watch: {
@@ -490,6 +661,130 @@ export default {
 
   methods: {
     getFileUrl,
+
+    // ==========================================
+    // FAVORITOS DEL NEGOCIO
+    // ==========================================
+
+    async verificarFavorito() {
+      if (!localStorage.getItem("cliente_token") || !this.negocio?.id) {
+        this.favorito = false;
+        return;
+      }
+
+      try {
+        const respuesta = await getFavoritos();
+        const datos = respuesta?.data?.data || {};
+
+        const favoritos = (datos.negocios || []).map(
+          (negocio) => Number(negocio.id)
+        );
+
+        this.favorito = favoritos.includes(Number(this.negocio.id));
+      } catch (error) {
+        console.error("Error al verificar favorito del negocio:", error);
+      }
+    },
+
+    async toggleFavorito() {
+      if (!localStorage.getItem("cliente_token")) {
+        this.favoritoPendiente = true;
+        this.dialogoLoginCliente = true;
+        return;
+      }
+
+      await this.actualizarFavorito();
+    },
+
+    async clienteAutenticado() {
+      this.dialogoLoginCliente = false;
+
+      if (this.favoritoPendiente) {
+        this.favoritoPendiente = false;
+        await this.actualizarFavorito();
+      }
+    },
+
+    async actualizarFavorito() {
+      if (this.procesandoFavorito || !this.negocio?.id) return;
+
+      if (!localStorage.getItem("cliente_token")) {
+        this.favoritoPendiente = true;
+        this.dialogoLoginCliente = true;
+        return;
+      }
+
+      const id = Number(this.negocio.id);
+      const eraFavorito = this.favorito;
+
+      this.procesandoFavorito = true;
+
+      try {
+        if (eraFavorito) {
+          await eliminarFavorito("NEGOCIO", id);
+        } else {
+          await agregarFavorito("NEGOCIO", id);
+        }
+
+        this.favorito = !eraFavorito;
+
+        this.$piaAlert.success(
+          this.favorito
+            ? "Negocio agregado a favoritos."
+            : "Negocio eliminado de favoritos."
+        );
+
+      } catch (error) {
+        console.error("Error al actualizar favorito:", error);
+
+        if (error.response?.status === 401) {
+          this.favoritoPendiente = true;
+          this.dialogoLoginCliente = true;
+
+          this.$piaAlert.info(
+            "Tu sesión ha expirado. Inicia sesión nuevamente."
+          );
+        } else {
+          this.$piaAlert.error(
+            error.response?.data?.mensaje ||
+            "No se pudo actualizar el favorito."
+          );
+        }
+      } finally {
+        this.procesandoFavorito = false;
+      }
+    },
+
+    // ==========================================
+    // OBTENER UBICACIÓN DEL CLIENTE
+    // ==========================================
+    obtenerUbicacionCliente() {
+      if (!navigator.geolocation) {
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          this.clienteUbicacion = {
+            latitud: position.coords.latitude,
+            longitud: position.coords.longitude,
+          };
+        },
+        (error) => {
+          console.warn(
+            "No se pudo obtener la ubicación del cliente:",
+            error.message
+          );
+
+          this.clienteUbicacion = null;
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000,
+        }
+      );
+    },
 
     urlImagen(ruta) {
       if (!ruta) return ''
@@ -534,6 +829,8 @@ export default {
 
         this.negocio = negocio;
 
+        await this.verificarFavorito();
+
         // =========================================
         // PROFESIONALES
         // =========================================
@@ -563,15 +860,10 @@ export default {
         // =========================================
         // HORARIOS
         // =========================================
-        this.horarios = Array.isArray(payload.horarios)
-          ? payload.horarios
-          : Array.isArray(negocio.horarios)
-            ? negocio.horarios
-            : [];
+        this.horarios = Array.isArray(payload.horarios) ? payload.horarios : Array.isArray(negocio.horarios) ? negocio.horarios : [];
 
-        console.log('NEGOCIO CARGADO:', this.negocio);
-        console.log('PROFESIONALES DEL NEGOCIO:', this.profesionales);
-        console.log('HORARIOS DEL NEGOCIO:', this.horarios);
+        // Obtener ubicación del cliente.
+        this.obtenerUbicacionCliente();
 
       } catch (error) {
         console.error(
@@ -702,7 +994,7 @@ export default {
 .negocio-page {
   width: 100%;
   min-height: 100%;
-  background: #fff;
+  background: #f5faf9;
   color: #102c4e;
   padding-bottom: 20px;
 }
@@ -880,6 +1172,7 @@ export default {
 
 .acciones-negocio {
   display: grid;
+  background: #fff;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
   padding: 10px 0 14px;
@@ -1191,6 +1484,7 @@ export default {
   gap: 12px;
   padding: 12px;
   border: 1px solid #edf1f5;
+  background: #fff;
   border-radius: 18px;
   box-shadow: 0 3px 12px #102c4e08;
   cursor: pointer;
@@ -1267,7 +1561,7 @@ export default {
   gap: 12px;
   margin-top: 18px;
   padding: 18px 14px;
-  background: #e9f8f7;
+  background: #fff;
   border-radius: 18px;
   color: #008f91;
 }
@@ -1292,6 +1586,7 @@ export default {
   justify-content: center;
   padding: 18px;
   border: 1px solid #e5ebf1;
+  background: #fff;
   border-radius: 16px;
 }
 
@@ -1327,6 +1622,7 @@ export default {
   padding: 14px;
   border: 1px solid #e8edf2;
   border-radius: 15px;
+  background: #fff;
 }
 
 .resena-cabecera {
@@ -1531,7 +1827,7 @@ export default {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
-  background: #f8fbfc;
+  background: #fff;
   border: 1px solid #e4eeef;
   border-radius: 16px;
 }
@@ -1722,5 +2018,95 @@ export default {
   line-height: 1.7;
   white-space: pre-line;
   overflow-wrap: anywhere;
+}
+
+/* ==========================================
+   CALIFICACIÓN Y DISTANCIA
+   ========================================== */
+
+.calificacion-negocio {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.calificacion-datos {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
+  gap: 5px;
+  font-size: 13px;
+}
+
+.calificacion-datos > span:not(.verificado) {
+  color: #60758c;
+}
+
+.distancia-negocio {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  white-space: nowrap;
+  color: #008f91;
+  font-size: 12px;
+}
+
+.distancia-negocio strong {
+  font-weight: 700;
+}
+
+/* ==========================================
+   ESTADO ACTUAL DEL NEGOCIO
+   ========================================== */
+
+.estado-negocio {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin: 7px 0 0 auto;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.estado-punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.estado-negocio.abierto {
+  background: #e5f8ed;
+  color: #079653;
+}
+
+.estado-negocio.abierto .estado-punto {
+  background: #079653;
+}
+
+.estado-negocio.cerrado {
+  background: #fff0f0;
+  color: #d64545;
+}
+
+.estado-negocio.cerrado .estado-punto {
+  background: #d64545;
+}
+
+.estado-negocio.sin-horario {
+  background: #f1f4f7;
+  color: #718096;
+}
+
+.estado-negocio.sin-horario .estado-punto {
+  background: #718096;
 }
 </style>

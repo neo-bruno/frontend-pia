@@ -119,19 +119,48 @@
       </div>
       
       <button type="button" class="negocio-resumen" @click="irAlNegocio">
-        <div class="negocio-resumen-icono">
-          <v-icon size="22">mdi-map-marker</v-icon>
+        <!-- COLUMNA IZQUIERDA: LOGO -->
+        <div class="negocio-logo">
+          <v-img v-if="logoNegocio" :src="logoNegocio" cover alt="Logo del negocio"/>
+          <v-icon v-else size="30">mdi-store</v-icon>
         </div>
+
+        <!-- COLUMNA CENTRAL: INFORMACIÓN -->
         <div class="negocio-resumen-contenido">
           <strong>{{ nombreNegocio }}</strong>
-          <span v-if="ubicacion">{{ ubicacion }}</span>
-          <span v-if="distancia" class="negocio-distancia">
-            <v-icon size="13">mdi-map-marker-distance</v-icon>{{ distancia }}
+
+          <div class="negocio-rating">
+            <v-icon color="#ffb900" size="21">mdi-star</v-icon>
+            <b>{{ ratingNegocio.toFixed(1) }}</b>
+            <span>({{ resenasNegocioTexto }})</span>
+          </div>
+
+          <span class="negocio-ubicacion">
+            <v-icon size="19">mdi-map-marker</v-icon>
+            {{ ubicacionNegocio }}
           </span>
-          <span v-if="!ubicacion" class="negocio-sin-ubicacion">Ver información del negocio</span>
         </div>
-        <v-icon class="negocio-resumen-flecha" size="22">mdi-chevron-right</v-icon>
+
+        <!-- COLUMNA DERECHA: ESTADO, FLECHA Y DISTANCIA -->
+        <div class="negocio-estado-contenedor">
+
+          <span class="negocio-estado" :class="estadoNegocio.abierto ? 'abierto' : 'cerrado'">
+            <i></i>
+            {{ estadoNegocio.texto }}
+          </span>
+
+          <v-icon class="negocio-resumen-flecha" size="27">
+            mdi-chevron-right
+          </v-icon>
+
+          <span v-if="distanciaNegocio" class="negocio-distancia">
+            <v-icon size="23">mdi-map-marker-distance</v-icon>
+            {{ distanciaNegocio }}
+          </span>
+
+        </div>
       </button>
+
     </section>
 
     <!-- PESTAÑAS -->
@@ -194,26 +223,42 @@
     <section v-else-if="tabActiva === 'profesional'" class="tab-content professional-content">
       <h2>Profesional</h2>
 
-      <div class="professional-card">
-        <v-avatar size="64" color="#eaf5f3">
-          <v-img v-if="fotoProfesional" :src="fotoProfesional" cover />
-          <v-icon v-else size="32" color="#079b98">
+      <!-- TARJETA DEL PROFESIONAL -->
+      <div class="professional-card" role="button" tabindex="0" @click="irAlProfesional" @keydown.enter="irAlProfesional">
+        <!-- FOTO -->
+        <v-avatar size="52" color="#eaf5f3" class="professional-avatar">
+          <v-img v-if="fotoProfesional" :src="fotoProfesional" cover/>
+          <v-icon v-else size="26" color="#079b98">
             mdi-account
           </v-icon>
         </v-avatar>
 
+        <!-- INFORMACIÓN -->
         <div class="professional-info">
           <strong>{{ nombreProfesional }}</strong>
-          <span>{{ nombreNegocio }}</span>
+
+          <span class="professional-business">
+            {{ nombreNegocio }}
+          </span>
 
           <div v-if="ratingProfesional > 0" class="professional-rating">
-            <v-icon size="16" color="#ffb900">mdi-star</v-icon>
-            {{ ratingProfesional.toFixed(1) }}
-            ({{ resenasProfesionalTexto }})
+            <v-icon size="16" color="#ffb900">
+              mdi-star
+            </v-icon>
+
+            <b>{{ ratingProfesional.toFixed(1) }}</b>
+
+            <span>({{ resenasProfesionalTexto }})</span>
           </div>
         </div>
+
+        <!-- FLECHA -->
+        <v-icon class="professional-arrow" size="23">
+          mdi-chevron-right
+        </v-icon>
       </div>
 
+      <!-- DESCRIPCIÓN -->
       <p v-if="descripcionProfesional" class="description">
         {{ descripcionProfesional }}
       </p>
@@ -308,17 +353,25 @@
     </v-card>
   </v-dialog>
 </main>
+
+<!-- LOGIN DEL CLIENTE -->
+<LoginCliente v-model="dialogoLoginCliente" @login="clienteAutenticado"/>
+
 </template>
 
 <script>
-import {
-  getServicesById
-} from '../services/servicio.api.js';
-import {
-  getFileUrl
-} from '@/utils/ayuda.js'
+import { getBusinessBySlug } from '../../negocio/services/negocio.api.js';
+import { getServicesById } from '../services/servicio.api.js';
+import { getFileUrl } from '@/utils/ayuda.js'
+import { getFavoritos, agregarFavorito, eliminarFavorito } from "../../../../cliente/modules/favoritos/services/favorito.api.js";
+import LoginCliente from '../../cliente/components/LoginCliente.vue';
+
 export default {
   name: 'PerfilServicioPage',
+
+  components: {
+    LoginCliente,
+  },
 
   data() {
     return {
@@ -346,6 +399,15 @@ export default {
           value: 'resenas'
         },
       ],
+
+      negocioPublico: null,
+      distanciaNegocio: '',
+
+      favorito: false,
+      procesandoFavorito: false,
+      dialogoLoginCliente: false,
+      favoritoPendiente: false,
+
     };
   },
 
@@ -701,8 +763,7 @@ export default {
     imagenPrincipal() {
       return this.imagenes[this.indiceImagen] || this.imagenes[0] || "";
     },
-
-    
+   
     resenas() {
       const posibles = [
         this.datosServicio.servicio_resenas,
@@ -727,6 +788,59 @@ export default {
       return lista || [];
     },
 
+    logoNegocio() {
+      return this.negocioPublico?.negocio?.logo
+        ? this.getFileUrl(this.negocioPublico.negocio.logo)
+        : this.datosNegocio.logo
+          ? this.getFileUrl(this.datosNegocio.logo)
+          : '';
+    },
+
+    ratingNegocio() {
+      return Number(
+        this.negocioPublico?.negocio?.calificacion ?? 0
+      );
+    },
+
+    resenasNegocioTexto() {
+      return Number(
+        this.negocioPublico?.negocio?.cantidad_calificaciones ?? 0
+      ).toLocaleString('es-BO');
+    },
+
+    ubicacionNegocio() {
+      const negocio = this.negocioPublico?.negocio || this.datosNegocio;
+
+      return [
+        negocio.municipio,
+        negocio.departamento
+      ].filter(Boolean).join(', ');
+    },
+
+    estadoNegocio() {
+      const horarios = this.negocioPublico?.horarios || [];
+
+      const ahora = new Date();
+      const dia = ahora.getDay() === 0 ? 7 : ahora.getDay();
+
+      const horaActual =
+        `${String(ahora.getHours()).padStart(2, '0')}:` +
+        `${String(ahora.getMinutes()).padStart(2, '0')}`;
+
+      const abierto = horarios.some(h => {
+        if (Number(h.dia_semana) !== dia) return false;
+
+        return (
+          horaActual >= String(h.hora_inicio).slice(0, 5) &&
+          horaActual < String(h.hora_fin).slice(0, 5)
+        );
+      });
+
+      return {
+        abierto,
+        texto: abierto ? 'Abierto' : 'Cerrado'
+      };
+    },
   },
 
   watch: {
@@ -741,6 +855,85 @@ export default {
 
   methods: {
     getFileUrl,
+
+    async cargarDatosNegocio() {
+      const slug = this.datosNegocio?.slug;
+
+      if (!slug) return;
+
+      try {
+        const respuesta = await getBusinessBySlug(slug);
+        const body = respuesta?.data || {};
+
+        if (body.ok === false) {
+          throw new Error(body.mensaje || 'No se pudo obtener el negocio');
+        }
+
+        const resultado = body.datos ?? body.data ?? body;
+
+        this.negocioPublico = resultado;
+
+        console.log('NEGOCIO COMPLETO:', this.negocioPublico);
+
+        this.calcularDistanciaNegocio();
+      } catch (error) {
+        console.error('Error al cargar información del negocio:', error);
+      }
+    },
+
+    calcularDistanciaNegocio() {
+      const negocio = this.negocioPublico?.negocio;
+
+      if (
+        !negocio?.latitud ||
+        !negocio?.longitud ||
+        !navigator.geolocation
+      ) {
+        this.distanciaNegocio = '';
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        posicion => {
+          const lat1 = posicion.coords.latitude;
+          const lon1 = posicion.coords.longitude;
+
+          const lat2 = Number(negocio.latitud);
+          const lon2 = Number(negocio.longitud);
+
+          if (!Number.isFinite(lat2) || !Number.isFinite(lon2)) return;
+
+          const rad = valor => valor * Math.PI / 180;
+          const R = 6371;
+
+          const dLat = rad(lat2 - lat1);
+          const dLon = rad(lon2 - lon1);
+
+          const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos(rad(lat1)) *
+            Math.cos(rad(lat2)) *
+            Math.sin(dLon / 2) ** 2;
+
+          const distancia = 2 * R * Math.atan2(
+            Math.sqrt(a),
+            Math.sqrt(1 - a)
+          );
+
+          this.distanciaNegocio = distancia < 1
+            ? `${Math.round(distancia * 1000)} m`
+            : `${distancia.toFixed(1)} km`;
+        },
+        () => {
+          this.distanciaNegocio = '';
+        },
+        {
+          enableHighAccuracy: false,
+          timeout: 8000,
+          maximumAge: 300000
+        }
+      );
+    },
     
     async copiarCodigoDescuento() {
       const codigo = this.codigoDescuento;
@@ -838,22 +1031,13 @@ export default {
         }
 
         const resultado = body.datos?? body.data?? body.servicio?? body;
-        console.log("🎟️ DATOS DEL DESCUENTO:", {
-  servicio: resultado.servicio,
-  descuento: resultado.servicio?.descuento,
-  descuento_id: resultado.servicio?.descuento_id,
-  descuento_codigo: resultado.servicio?.descuento_codigo,
-  codigo_descuento: resultado.servicio?.codigo_descuento,
-  descuento_visibilidad: resultado.servicio?.descuento_visibilidad,
-  visibilidad_descuento: resultado.servicio?.visibilidad_descuento,
-});
+        
         if (!resultado || typeof resultado !== 'object') {
           throw new Error('La API no devolvió información del servicio.');
         }
         this.servicio = resultado;
-
-        console.log("📦 RESPUESTA COMPLETA DEL SERVICIO:", resultado);
-
+        await this.verificarFavorito();
+        await this.cargarDatosNegocio();        
       } catch (error) {
         this.error =
           error.response?.data?.mensaje ||
@@ -926,12 +1110,142 @@ export default {
       }
     },
 
-    toggleFavorito() {
-      // La integración con favoritos se conectará al mismo servicio
-      // de favoritos utilizado por la pantalla de búsqueda.
-      this.$toast?.info?.(
-        'La integración de favoritos del detalle está pendiente.',
+    async toggleFavorito() {
+      // Si no inició sesión, abrimos el login y guardamos la acción pendiente.
+      if (!localStorage.getItem('cliente_token')) {
+        this.favoritoPendiente = true;
+        this.dialogoLoginCliente = true;
+        return;
+      }
+
+      await this.actualizarFavorito();
+    },
+
+    async clienteAutenticado() {
+      this.dialogoLoginCliente = false;
+
+      // Si el usuario abrió el login para guardar este servicio,
+      // completamos la acción automáticamente.
+      if (this.favoritoPendiente) {
+        this.favoritoPendiente = false;
+        await this.actualizarFavorito();
+        return;
+      }
+    },
+
+    async actualizarFavorito() {
+      if (this.procesandoFavorito || !this.servicio) return;
+
+      const id = Number(
+        this.datosServicio.id ||
+        this.datosServicio.servicio_id ||
+        this.$route.params.servicioId
       );
+
+      if (!Number.isInteger(id) || id <= 0) {
+        console.error('ID de servicio inválido:', this.servicio);
+        return;
+      }
+
+      if (!localStorage.getItem('cliente_token')) {
+        this.favoritoPendiente = true;
+        this.dialogoLoginCliente = true;
+        return;
+      }
+
+      const eraFavorito = this.favorito;
+      this.procesandoFavorito = true;
+
+      try {
+        if (eraFavorito) {
+          await eliminarFavorito('SERVICIO', id);
+        } else {
+          await agregarFavorito('SERVICIO', id);
+        }
+
+        this.favorito = !eraFavorito;
+
+        this.$piaAlert.success(
+          this.favorito
+            ? 'Servicio agregado a favoritos.'
+            : 'Servicio eliminado de favoritos.'
+        );
+
+      } catch (error) {
+        console.error('Error al actualizar favorito:', error);
+
+        if (error.response?.status === 401) {
+          this.favoritoPendiente = !eraFavorito;
+          this.dialogoLoginCliente = true;
+
+          this.$piaAlert.info(
+            'Tu sesión ha expirado. Inicia sesión nuevamente.'
+          );
+        } else {
+          this.$piaAlert.error(
+            error.response?.data?.mensaje ||
+            'No se pudo actualizar el favorito.'
+          );
+        }
+      } finally {
+        this.procesandoFavorito = false;
+      }
+    },
+
+    async verificarFavorito() {
+      if (!localStorage.getItem('cliente_token') || !this.servicio) {
+        this.favorito = false;
+        return;
+      }
+
+      try {
+        const respuesta = await getFavoritos();
+        const datos = respuesta?.data?.data || {};
+
+        const favoritos = (datos.servicios || []).map(
+          servicio => Number(servicio.id)
+        );
+
+        const id = Number(
+          this.datosServicio.id ||
+          this.datosServicio.servicio_id ||
+          this.$route.params.servicioId
+        );
+
+        this.favorito = favoritos.includes(id);
+
+      } catch (error) {
+        console.error('Error al verificar favorito:', error);
+      }
+    },
+
+    async verificarFavorito() {
+      const token = localStorage.getItem("cliente_token");
+
+      if (!token || !this.servicio) {
+        this.favorito = false;
+        return;
+      }
+
+      try {
+        const respuesta = await getFavoritos();
+        const datos = respuesta?.data?.data || {};
+
+        const favoritos = (datos.servicios || []).map(
+          (servicio) => Number(servicio.id)
+        );
+
+        const id = Number(
+          this.datosServicio.id ||
+          this.datosServicio.servicio_id ||
+          this.$route.params.servicioId
+        );
+
+        this.favorito = favoritos.includes(id);
+
+      } catch (error) {
+        console.error("Error al verificar favorito:", error);
+      }
     },
 
     reservarAhora() {
@@ -979,7 +1293,6 @@ export default {
     },
 
     irAlNegocio(){
-      console.log('EL SERVICIO: ', this.servicio)
       const slug = this.servicio.negocio.slug
       if(!slug) return
       
@@ -988,7 +1301,22 @@ export default {
       } else {
         console.info("Falta definir la ruta pública del negocio:", this.servicio.negocio,);
       }
-    }
+    },
+
+    irAlProfesional() {
+      const slug = this.datosProfesional?.slug;
+
+      if (!slug) {
+        console.warn("El profesional no tiene un slug definido.");
+        return;
+      }
+
+      this.$router.push({
+        name: "perfil-profesional",
+        params: { slug },
+      });
+    },
+
   },
 };
 </script>
@@ -1219,7 +1547,7 @@ export default {
 }
 
 .description {
-  margin: 0;
+  margin-top: 10px;
   color: #627893;
   font-size: 13px;
   line-height: 1.65;
@@ -1381,7 +1709,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 15px 0;
+  padding: 15px 10px;
 }
 
 .reviews-overview>strong {
@@ -1945,5 +2273,633 @@ export default {
     font-size: 14px;
   }
 }
+.negocio-resumen {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 100px;
+  margin-top: 7px;
+  padding: 12px;
+  border: 1px solid #e8edf3;
+  border-radius: 13px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
 
+.negocio-logo {
+  display: flex;
+  flex: 0 0 62px;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  height: 62px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #eaf5f3;
+  color: #079b98;
+}
+
+.negocio-logo .v-img {
+  width: 100%;
+  height: 100%;
+}
+
+.negocio-resumen-contenido {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.negocio-resumen-contenido > strong {
+  color: #102653;
+  font-size: 13px;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.negocio-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #718096;
+  font-size: 12px;
+}
+
+.negocio-rating b {
+  color: #102653;
+}
+
+.negocio-ubicacion {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #718096;
+  font-size: 11px;
+}
+
+.negocio-ubicacion .v-icon {
+  color: #079b98;
+}
+
+.negocio-estado-contenedor {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  min-width: 83px;
+}
+
+.negocio-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 9px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.negocio-estado i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.negocio-estado.abierto {
+  background: #e8f8ef;
+  color: #15965a;
+}
+
+.negocio-estado.cerrado {
+  background: #fff0ed;
+  color: #d84b42;
+}
+
+.negocio-distancia {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #079b98;
+  font-size: 11px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.negocio-resumen-flecha {
+  flex: 0 0 auto;
+  color: #102653;
+}
+
+@media (max-width: 360px) {
+  .negocio-resumen {
+    gap: 7px;
+    padding: 9px;
+  }
+
+  .negocio-logo {
+    flex-basis: 48px;
+    width: 48px;
+    height: 48px;
+  }
+
+  .negocio-estado-contenedor {
+    min-width: 70px;
+  }
+
+  .negocio-estado {
+    padding: 5px 7px;
+    font-size: 9px;
+  }
+}
+
+/* ==========================================
+   TARJETA DEL NEGOCIO
+   ESTRUCTURA: 3 COLUMNAS
+   ========================================== */
+
+.negocio-resumen {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr) 125px;
+  grid-template-rows: repeat(3, minmax(0, auto));
+  align-items: center;
+  column-gap: 20px;
+
+  width: 100%;
+  min-height: 150px;
+  margin-top: 7px;
+  padding: 18px 16px;
+
+  border: 1px solid #e8edf3;
+  border-radius: 16px;
+  background: #fff;
+  color: #102653;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* LOGO: OCUPA LAS TRES FILAS */
+
+.negocio-logo {
+  grid-column: 1;
+  grid-row: 1 / 4;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 90px;
+  height: 90px;
+  overflow: hidden;
+
+  border-radius: 50%;
+  background: #eaf5f3;
+  color: #079b98;
+}
+
+.negocio-logo .v-img {
+  width: 100%;
+  height: 100%;
+}
+
+/* INFORMACIÓN CENTRAL */
+
+.negocio-resumen-contenido {
+  display: contents;
+}
+
+.negocio-resumen-contenido > strong {
+  grid-column: 2;
+  grid-row: 1;
+
+  min-width: 0;
+  color: #102653;
+  font-size: 19px;
+  font-weight: 850;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.negocio-rating {
+  grid-column: 2;
+  grid-row: 2;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  color: #718096;
+  font-size: 17px;
+}
+
+.negocio-rating b {
+  color: #718096;
+  font-weight: 750;
+}
+
+.negocio-ubicacion {
+  grid-column: 2;
+  grid-row: 3;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  min-width: 0;
+  color: #718096;
+  font-size: 17px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.negocio-ubicacion .v-icon {
+  flex: 0 0 auto;
+  color: #079b98;
+}
+
+/* COLUMNA DERECHA */
+
+.negocio-estado-contenedor {
+  grid-column: 3;
+  grid-row: 1 / 4;
+
+  display: grid;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  justify-items: center;
+  align-items: center;
+
+  width: 100%;
+  height: 100%;
+}
+
+.negocio-estado {
+  grid-row: 1;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+
+  padding: 12px 17px;
+  border-radius: 30px;
+
+  font-size: 17px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.negocio-estado i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.negocio-estado.abierto {
+  background: #e8f8ef;
+  color: #15965a;
+}
+
+.negocio-estado.cerrado {
+  background: #fff0ed;
+  color: #d84b42;
+}
+
+.negocio-resumen-flecha {
+  grid-row: 2;
+  color: #718096;
+}
+
+.negocio-distancia {
+  grid-row: 3;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  color: #718096;
+  font-size: 17px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.negocio-distancia .v-icon {
+  color: #079b98;
+}
+
+@media (max-width: 600px) {
+  .negocio-resumen {
+    grid-template-columns: 52px minmax(0, 1fr) 75px;
+    column-gap: 8px;
+    min-height: 88px;
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .negocio-logo {
+    width: 52px;
+    height: 52px;
+  }
+
+  .negocio-resumen-contenido > strong {
+    font-size: 12px;
+  }
+
+  .negocio-rating {
+    gap: 3px;
+    font-size: 11px;
+  }
+
+  .negocio-rating .v-icon {
+    font-size: 16px !important;
+  }
+
+  .negocio-ubicacion {
+    gap: 3px;
+    font-size: 10px;
+  }
+
+  .negocio-ubicacion .v-icon {
+    font-size: 14px !important;
+  }
+
+  .negocio-estado {
+    gap: 4px;
+    padding: 5px 7px;
+    font-size: 9px;
+  }
+
+  .negocio-estado i {
+    width: 6px;
+    height: 6px;
+  }
+
+  .negocio-resumen-flecha {
+    font-size: 21px !important;
+  }
+
+  .negocio-distancia {
+    gap: 3px;
+    font-size: 10px;
+  }
+
+  .negocio-distancia .v-icon {
+    font-size: 16px !important;
+  }
+}
+
+.negocio-resumen {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 75px;
+  grid-template-rows: repeat(3, auto);
+  align-items: center;
+  column-gap: 4px;
+
+  width: 100%;
+  min-height: 0;
+  margin-top: 7px;
+  padding: 8px 8px;
+
+  border: 1px solid #e8edf3;
+  border-radius: 12px;
+  background: #fff;
+  color: #102653;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* LOGO */
+.negocio-logo {
+  grid-column: 1;
+  grid-row: 1 / 4;
+
+  width: 52px;
+  height: 52px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #eaf5f3;
+  color: #079b98;
+}
+
+/* INFORMACIÓN CENTRAL */
+.negocio-resumen-contenido {
+  display: contents;
+}
+
+.negocio-resumen-contenido > strong {
+  grid-column: 2;
+  grid-row: 1;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 850;
+}
+
+.negocio-rating {
+  grid-column: 2;
+  grid-row: 2;
+
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.negocio-ubicacion {
+  grid-column: 2;
+  grid-row: 3;
+
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+/* COLUMNA DERECHA */
+.negocio-estado-contenedor {
+  grid-column: 3;
+  grid-row: 1 / 4;
+
+  display: grid;
+  grid-template-rows: repeat(3, auto);
+  justify-items: center;
+  align-content: center;
+  gap: 5px;
+}
+
+.negocio-estado {
+  grid-row: 1;
+  padding: 5px 7px;
+  font-size: 9px;
+}
+
+.negocio-estado i {
+  width: 6px;
+  height: 6px;
+}
+
+.negocio-resumen-flecha {
+  grid-row: 1;
+  padding-top: 20px;
+  font-size: 19px !important;
+}
+
+.negocio-distancia {
+  grid-row: 3;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.negocio-distancia .v-icon {
+  font-size: 16px !important;
+}
+
+/* ==========================================
+   AJUSTE FINAL: TARJETA COMPACTA
+   ========================================== */
+
+.negocio-resumen {
+  min-height: unset !important;
+  height: auto !important;
+  padding: 6px 6px !important;
+
+  grid-template-rows: repeat(3, min-content) !important;
+  align-content: center !important;
+  row-gap: 2px !important;
+}
+
+/* Logo centrado sin aumentar la altura */
+.negocio-logo {
+  width: 48px !important;
+  height: 48px !important;
+}
+
+/* Información central */
+.negocio-resumen-contenido > strong {
+  line-height: 15px !important;
+  margin: 0 !important;
+}
+
+.negocio-rating {
+  line-height: 14px !important;
+  margin: 0 !important;
+}
+
+.negocio-ubicacion {
+  line-height: 14px !important;
+  margin: 0 !important;
+}
+
+/* Columna derecha: sin espacios sobrantes */
+.negocio-estado-contenedor {
+  grid-template-rows: repeat(3, min-content) !important;
+  align-content: center !important;
+  gap: 0px !important;
+}
+
+.negocio-estado {
+  padding: 3px 6px !important;
+  line-height: 12px !important;
+}
+
+.negocio-resumen-flecha {
+  line-height: 16px !important;
+}
+
+.negocio-distancia {
+  line-height: 14px !important;
+}
+
+/* ==========================================
+   TARJETA DEL PROFESIONAL
+   ========================================== */
+
+.professional-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  width: 100%;
+  min-height: 68px;
+  padding: 8px 10px;
+
+  border: 1px solid #e8edf3;
+  border-radius: 12px;
+  background: #fff;
+
+  cursor: pointer;
+  text-align: left;
+
+  transition: background 0.2s ease;
+}
+
+.professional-card:active {
+  background: #f5faf9;
+}
+
+/* FOTO */
+
+.professional-avatar {
+  flex: 0 0 52px;
+}
+
+/* INFORMACIÓN */
+
+.professional-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.professional-info > strong {
+  color: #102653;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 16px;
+}
+
+.professional-business {
+  color: #718096;
+  font-size: 11px;
+  line-height: 14px;
+}
+
+/* CALIFICACIÓN */
+
+.professional-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  color: #718096;
+  font-size: 11px;
+  line-height: 14px;
+}
+
+.professional-rating b {
+  color: #102653;
+  font-weight: 750;
+}
+
+/* FLECHA */
+
+.professional-arrow {
+  flex: 0 0 auto;
+  color: #718096;
+}
 </style>

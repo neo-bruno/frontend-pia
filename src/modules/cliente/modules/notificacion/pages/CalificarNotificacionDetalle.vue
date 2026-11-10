@@ -26,49 +26,156 @@
         "¿Cómo calificarías tu experiencia con este aspecto del servicio?" }}
     </p>
 
-    <div class="estrellas">
-      <button v-for="estrella in 5" :key="estrella" type="button" class="estrella" :aria-label="`Calificar con ${estrella} estrellas`" @click="puntaje = estrella">
-        <v-icon :color="estrella <= puntaje?'#F5B301' : '#CBD5E1'" size="39">
-          {{ estrella <= puntaje?"mdi-star" : "mdi-star-outline" }}
-        </v-icon>
-      </button>
-    </div>
+    <!-- ========================================================= -->
+<!-- CALIFICACIÓN YA REGISTRADA -->
+<!-- ========================================================= -->
 
-    <p v-if="puntaje" class="texto-puntaje">
-      {{ textoPuntaje }}
-    </p>
-    <p v-else class="ayuda">
-      Selecciona de 1 a 5 estrellas.
-    </p>
+<div v-if="yaCalificada" class="calificacion-registrada">
 
-    <label for="comentario" class="label-comentario">
-      Cuéntanos más (opcional)
-    </label>
+  <v-alert
+    type="success"
+    variant="tonal"
+    density="comfortable"
+    class="alerta"
+  >
+    Ya registraste tu calificación para esta reserva.
+  </v-alert>
 
-    <v-textarea id="comentario" v-model="observacion" placeholder="¿Qué te gustó o qué podríamos mejorar?" variant="outlined" rows="4" maxlength="1000" counter="1000" hide-details="auto" rounded="lg" class="campo-comentario" />
+  <h3 class="titulo-calificacion">
+    Tu calificación
+  </h3>
 
-    <v-alert v-if="error" type="error" variant="tonal" density="comfortable" class="alerta">
-      {{ error }}
-    </v-alert>
+  <!-- ESTRELLAS REGISTRADAS -->
+  <div class="estrellas">
+    <v-icon
+      v-for="estrella in 5"
+      :key="estrella"
+      :color="estrella <= puntaje ? '#F5B301' : '#CBD5E1'"
+      size="39"
+    >
+      {{ estrella <= puntaje ? "mdi-star" : "mdi-star-outline" }}
+    </v-icon>
+  </div>
 
-    <v-alert v-if="enviada" type="success" variant="tonal" density="comfortable" class="alerta">
-      ¡Gracias! Tu calificación fue registrada.
-    </v-alert>
+  <p class="texto-puntaje">
+    {{ textoPuntaje }}
+  </p>
 
-    <v-btn block color="#0f8f8c" size="large" rounded="lg" :loading="enviando" :disabled="!puedeEnviar || cargandoEvaluacion" class="btn-enviar" @click="enviarCalificacion">
-      Enviar calificación
-    </v-btn>
+  <!-- COMENTARIO REGISTRADO -->
+  <div
+    v-if="observacion"
+    class="observacion-registrada"
+  >
+    <strong>Tu comentario:</strong>
+    <p>{{ observacion }}</p>
+  </div>
 
-    <p class="nota">
-      Solo puedes registrar una calificación por criterio y reserva.
-    </p>
+  <v-alert
+    type="info"
+    variant="tonal"
+    density="comfortable"
+    class="alerta"
+  >
+    Esta calificación ya fue registrada y no puedes modificarla.
+  </v-alert>
+
+</div>
+
+
+<!-- ========================================================= -->
+<!-- FORMULARIO PARA CALIFICAR -->
+<!-- ========================================================= -->
+
+<div v-else>
+
+  <div class="estrellas">
+    <button
+      v-for="estrella in 5"
+      :key="estrella"
+      type="button"
+      class="estrella"
+      :aria-label="`Calificar con ${estrella} estrellas`"
+      @click="puntaje = estrella"
+    >
+      <v-icon
+        :color="estrella <= puntaje ? '#F5B301' : '#CBD5E1'"
+        size="39"
+      >
+        {{ estrella <= puntaje ? "mdi-star" : "mdi-star-outline" }}
+      </v-icon>
+    </button>
+  </div>
+
+  <p v-if="puntaje" class="texto-puntaje">
+    {{ textoPuntaje }}
+  </p>
+
+  <p v-else class="ayuda">
+    Selecciona de 1 a 5 estrellas.
+  </p>
+
+  <label for="comentario" class="label-comentario">
+    Cuéntanos más (opcional)
+  </label>
+
+  <v-textarea
+    id="comentario"
+    v-model="observacion"
+    placeholder="¿Qué te gustó o qué podríamos mejorar?"
+    variant="outlined"
+    rows="4"
+    maxlength="1000"
+    counter="1000"
+    hide-details="auto"
+    rounded="lg"
+    class="campo-comentario"
+  />
+
+  <v-alert
+    v-if="error"
+    type="error"
+    variant="tonal"
+    density="comfortable"
+    class="alerta"
+  >
+    {{ error }}
+  </v-alert>
+
+  <v-alert
+    v-if="enviada"
+    type="success"
+    variant="tonal"
+    density="comfortable"
+    class="alerta"
+  >
+    ¡Gracias! Tu calificación fue registrada.
+  </v-alert>
+
+  <v-btn
+    block
+    color="#0f8f8c"
+    size="large"
+    rounded="lg"
+    :loading="enviando"
+    :disabled="!puedeEnviar || cargandoEvaluacion"
+    class="btn-enviar"
+    @click="enviarCalificacion"
+  >
+    Enviar calificación
+  </v-btn>
+
+  <p class="nota">
+    Solo puedes registrar una calificación por criterio y reserva.
+  </p>
+
+</div>
   </v-card>
 </div>
 </template>
 
 <script>
 import {
-  crearCalificacion
+  crearCalificacion, obtenerCalificacion
 } from "@/modules/cliente/modules/calificacion/services/calificacion.api";
 import { useNotificationStore } from "@/stores/notification.store";
 import {
@@ -89,10 +196,15 @@ export default {
       evaluacionNombre: "Cargando evaluación...",
       evaluacionDescripcion: "",
       cargandoEvaluacion: false,
+      calificacionExistente: null,
     };
   },
 
   computed: {
+    yaCalificada() {
+      return !!this.calificacionExistente;
+    },
+
     reservaId() {
       return Number(this.$route.query.reserva_id);
     },
@@ -128,6 +240,32 @@ export default {
   },
 
   methods: {
+    // ============================================================
+    // CONSULTAR SI EL CLIENTE YA CALIFICÓ
+    // ============================================================
+
+    async cargarCalificacionExistente() {
+      try {
+        const respuesta = await obtenerCalificacion(
+          this.reservaId,
+          this.evaluacionId,
+        );
+
+        this.calificacionExistente = respuesta.data?.data || null;
+
+        if (this.calificacionExistente) {
+          this.puntaje = Number(this.calificacionExistente.puntaje);
+          this.observacion =
+            this.calificacionExistente.observacion || "";
+        }
+      } catch (error) {
+        console.error("Error consultando calificación:", error);
+        this.error =
+          error.response?.data?.message ||
+          "No se pudo consultar la calificación registrada.";
+      }
+    },
+
     async cargarEvaluacion() {
       if (!this.evaluacionId) {
         this.evaluacionNombre = "Evaluación no válida";
@@ -139,16 +277,29 @@ export default {
       this.cargandoEvaluacion = true;
 
       try {
-        const respuesta = await obtenerEvaluacion(this.evaluacionId);
+        const respuesta = await obtenerEvaluacion(this.evaluacionId, this.reservaId);
         const evaluacion = respuesta.data?.data;
-
+        console.log('EVALUACION: ', evaluacion)
         if (!respuesta.data?.ok || !evaluacion) {
           throw new Error("No se encontraron los datos de la evaluación.");
         }
-        console.log('codigo: ', evaluacion)
-        this.evaluacionObjetivo = evaluacion.objetivo || ''
-        this.evaluacionNombre = evaluacion.tipo_nombre || "Evaluación del servicio";
+        
+        this.evaluacionObjetivo = evaluacion.objetivo || "";
+
+        const nombresPorObjetivo = {
+          SERVICIO: evaluacion.servicio_nombre,
+          PROFESIONAL: evaluacion.profesional_nombre,
+          NEGOCIO: evaluacion.negocio_nombre,
+          PIA: "PIA",
+        };
+
+        this.evaluacionNombre =
+          nombresPorObjetivo[evaluacion.objetivo] ||
+          evaluacion.objetivo_nombre ||
+          "Evaluación del servicio";
+
         this.evaluacionDescripcion = evaluacion.tipo_descripcion || "";
+
       } catch (error) {
         console.error("Error cargando evaluación:", error);
 
@@ -201,10 +352,11 @@ export default {
     },
   },
 
-  mounted() {
-    console.log("Reserva recibida:", this.$route.query.reserva_id);
-    console.log("Evaluación recibida:", this.$route.query.evaluacion_id);
-    this.cargarEvaluacion();
+  async mounted() {
+    await Promise.all([
+      this.cargarEvaluacion(),
+      this.cargarCalificacionExistente(),
+    ]);
   },
 };
 </script>
@@ -353,5 +505,38 @@ export default {
   .tarjeta {
     padding: 30px;
   }
+}
+
+.titulo-calificacion {
+  margin: 22px 0 10px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #102d5a;
+}
+
+.calificacion-registrada .estrellas {
+  pointer-events: none;
+}
+
+.observacion-registrada {
+  margin-top: 22px;
+  padding: 15px;
+  border: 1px solid #dcefee;
+  border-radius: 12px;
+  background: #f5fbfa;
+  text-align: left;
+}
+
+.observacion-registrada strong {
+  color: #334e68;
+  font-size: 13px;
+}
+
+.observacion-registrada p {
+  margin: 8px 0 0;
+  color: #667b91;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
 }
 </style>

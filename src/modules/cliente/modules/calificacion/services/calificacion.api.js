@@ -1,13 +1,13 @@
 import { http } from "@/services/api";
 
 function obtenerTokenCliente() {
-  const token = localStorage.getItem("cliente_token");
+	const token = localStorage.getItem("cliente_token");
 
-  if (!token) {
-    throw new Error("No existe token de cliente autenticado.");
-  }
+	if (!token) {
+		throw new Error("No existe token de cliente autenticado.");
+	}
 
-  return token;
+	return token;
 }
 
 // ============================================================
@@ -15,13 +15,13 @@ function obtenerTokenCliente() {
 // ============================================================
 
 export function registrarCalificacion(datos) {
-  const token = obtenerTokenCliente();
+	const token = obtenerTokenCliente();
 
-  return http().post("/calificacion", datos, {
-    headers: {
-      "x-cliente-token": token,
-    },
-  });
+	return http().post("/calificacion", datos, {
+		headers: {
+			"x-cliente-token": token,
+		},
+	});
 }
 
 // ============================================================
@@ -29,24 +29,41 @@ export function registrarCalificacion(datos) {
 // ============================================================
 
 export function getCalificacionesPendientes() {
-  const token = obtenerTokenCliente();
+	const token = obtenerTokenCliente();
 
-  return http().get("/calificacion/pendientes", {
-    headers: {
-      "x-cliente-token": token,
-    },
-  });
+	return http().get("/calificacion/pendientes", {
+		headers: {
+			"x-cliente-token": token,
+		},
+	});
 }
 
 // ============================================================
 // CREAR CALIFICACION
 // ============================================================
 export function crearCalificacion(datos) {
-  const token = obtenerTokenCliente();
+	const token = obtenerTokenCliente();
 
-  return http().post("/calificacion", datos, {
-    headers: {
-      "x-cliente-token": token,
-    },
-  });
+	return http().post("/calificacion", datos, {
+		headers: {
+			"x-cliente-token": token,
+		},
+	});
+}
+
+// ============================================================
+// OBTENER CALIFICACIÓN REGISTRADA
+// ============================================================
+
+export function obtenerCalificacion(reservaId, evaluacionId) {
+	const token = obtenerTokenCliente();
+
+	return http().get(
+		`/calificacion/reserva/${reservaId}/evaluacion/${evaluacionId}`,
+		{
+			headers: {
+				"x-cliente-token": token,
+			},
+		},
+	);
 }

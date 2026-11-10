@@ -639,6 +639,8 @@ export default {
 .detalle-reserva-page {
   max-width: 700px;
   margin: 0 auto;
+  padding-left: 7px;
+  padding-right: 7px;
 }
 
 /* ============================================================

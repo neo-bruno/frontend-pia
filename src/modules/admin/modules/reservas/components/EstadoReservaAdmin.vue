@@ -86,7 +86,7 @@
            NOTA
       ====================================================== -->
 
-    <div class="nota-section">
+    <!-- <div class="nota-section">
 
       <label>
         Nota <span>(opcional)</span>
@@ -94,7 +94,7 @@
 
       <v-textarea v-model="observacion" placeholder="Ej. El cliente llegó puntual..." variant="outlined" rows="2" auto-grow hide-details maxlength="500" />
 
-    </div>
+    </div> -->
 
     <!-- =====================================================
            ACCIONES
@@ -165,13 +165,13 @@ export default {
         color: "verde",
       },
 
-      {
-        value: "COMPLETADA",
-        label: "COMPLETADA",
-        descripcion: "Servicio finalizado",
-        icon: "mdi-check",
-        color: "morado",
-      },
+      // {
+      //   value: "COMPLETADA",
+      //   label: "COMPLETADA",
+      //   descripcion: "Servicio finalizado",
+      //   icon: "mdi-check",
+      //   color: "morado",
+      // },
 
       {
         value: "CANCELADA",

@@ -610,6 +610,9 @@ import {
   cancelarBloqueo,
   getBloqueos
 } from "../services/bloqueo.api";
+import {
+  useNotificationAdminStore
+} from "@/stores/notificacionAdmin.store";
 
 import dayjs from "dayjs";
 import "dayjs/locale/es";
@@ -1087,6 +1090,14 @@ export default {
 
         if (res.status === 201 || res.status === 200) {
           this.sheetEstadoReserva = false;
+
+          if (estado === "COMPLETADA") {
+            const notificationStore = useNotificationAdminStore();
+
+            notificationStore.sincronizarNotificacionReservaLeida(
+              this.reservaSeleccionada.id
+            );
+          }
 
           // Mensaje según el estado seleccionado
           const mensajes = {

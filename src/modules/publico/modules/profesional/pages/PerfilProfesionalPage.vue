@@ -23,8 +23,8 @@
       </button>
 
       <button class="header-btn" @click="toggleFavorito">
-        <v-icon size="21" :color="favorito?'#0f9999' : undefined">
-          {{ favorito?'mdi-heart' : 'mdi-heart-outline' }}
+        <v-icon size="21" :color="favorito ? '#0f9999' : undefined">
+          {{ favorito ? 'mdi-heart' : 'mdi-heart-outline' }}
         </v-icon>
       </button>
 
@@ -487,6 +487,10 @@
 </v-dialog>
 
 <DescripcionServicioProfesionalAdmin v-if="servicioSeleccionadoId" v-model="dialogServicio" :servicio-id="servicioSeleccionadoId"/>
+
+<!-- ACCESO DEL CLIENTE -->
+<LoginCliente v-model="dialogoLoginCliente" @login="clienteAutenticado"/>
+
 </template>
 
 <script>
@@ -495,11 +499,16 @@ import DescripcionServicioProfesionalAdmin from '../components/DescripcionServic
 import { getFileUrl } from '@/utils/ayuda'
 import { getProfessionalBySlug } from '../services/profesional.api'
 
+import { getFavoritos, agregarFavorito, eliminarFavorito, } from '@/modules/cliente/modules/favoritos/services/favorito.api.js';
+
+import LoginCliente from '@/modules/publico/modules/cliente/components/LoginCliente.vue';
+
 export default {
   name: 'PerfilProfesionalPage',
 
   components: {
     DescripcionServicioProfesionalAdmin,
+    LoginCliente,
   },
 
   data() {
@@ -513,6 +522,10 @@ export default {
 
       servicioSeleccionadoId: null,
       dialogServicio: false,
+
+      dialogoLoginCliente: false,
+      favoritoPendiente: false,
+      procesandoFavorito: false,
     }
   },
 
@@ -677,6 +690,8 @@ export default {
           servicios: res.data.data.servicios || []
         }
 
+        await this.verificarFavorito();
+
       } catch (error) {
 
         console.error('Error obteniendo profesional:', error)
@@ -701,8 +716,114 @@ export default {
 
     },
 
-    toggleFavorito() {
-      this.favorito = !this.favorito
+    // ==========================================
+    // FAVORITOS DEL PROFESIONAL
+    // ==========================================
+    async verificarFavorito() {
+      if (
+        !localStorage.getItem("cliente_token") ||
+        !this.profesional?.id
+      ) {
+        this.favorito = false;
+        return;
+      }
+
+      try {
+        const respuesta = await getFavoritos();
+        const datos = respuesta?.data?.data || {};
+
+        const favoritos = (datos.profesionales || []).map(
+          (profesional) => Number(profesional.id)
+        );
+
+        this.favorito = favoritos.includes(
+          Number(this.profesional.id)
+        );
+
+      } catch (error) {
+        console.error(
+          "Error al verificar favorito del profesional:",
+          error
+        );
+      }
+    },
+
+    async toggleFavorito() {
+      if (!localStorage.getItem("cliente_token")) {
+        this.favoritoPendiente = true;
+        this.dialogoLoginCliente = true;
+        return;
+      }
+
+      await this.actualizarFavorito();
+    },
+
+    async clienteAutenticado() {
+      this.dialogoLoginCliente = false;
+
+      if (this.favoritoPendiente) {
+        this.favoritoPendiente = false;
+        await this.actualizarFavorito();
+      } else {
+        await this.verificarFavorito();
+      }
+    },
+
+    async actualizarFavorito() {
+      if (
+        this.procesandoFavorito ||
+        !this.profesional?.id
+      ) return;
+
+      if (!localStorage.getItem("cliente_token")) {
+        this.favoritoPendiente = true;
+        this.dialogoLoginCliente = true;
+        return;
+      }
+
+      const id = Number(this.profesional.id);
+      const eraFavorito = this.favorito;
+
+      this.procesandoFavorito = true;
+
+      try {
+        if (eraFavorito) {
+          await eliminarFavorito("PROFESIONAL", id);
+        } else {
+          await agregarFavorito("PROFESIONAL", id);
+        }
+
+        this.favorito = !eraFavorito;
+
+        this.$piaAlert.success(
+          this.favorito
+            ? "Profesional agregado a favoritos."
+            : "Profesional eliminado de favoritos."
+        );
+
+      } catch (error) {
+        console.error(
+          "Error al actualizar favorito del profesional:",
+          error
+        );
+
+        if (error.response?.status === 401) {
+          this.favoritoPendiente = true;
+          this.dialogoLoginCliente = true;
+
+          this.$piaAlert.info(
+            "Tu sesión ha expirado. Inicia sesión nuevamente."
+          );
+        } else {
+          this.$piaAlert.error(
+            error.response?.data?.mensaje ||
+            "No se pudo actualizar el favorito."
+          );
+        }
+
+      } finally {
+        this.procesandoFavorito = false;
+      }
     },
 
     agendarCita() {

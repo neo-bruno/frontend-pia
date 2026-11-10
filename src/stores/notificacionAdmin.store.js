@@ -1,222 +1,257 @@
 import { defineStore } from "pinia";
 
 import {
-  getNotificacionesAdmin,
-  getNotificacionesAdminNoLeidas,
-  getNotificacionAdminById,
-  marcarNotificacionAdminComoLeida,
-  marcarTodasNotificacionesAdminComoLeidas,
+	getNotificacionesAdmin,
+	getNotificacionesAdminNoLeidas,
+	getNotificacionAdminById,
+	marcarNotificacionAdminComoLeida,
+	marcarTodasNotificacionesAdminComoLeidas,
 } from "@/modules/admin/modules/notificacion-admin/services/notificacionAdmin.api";
 
 export const useNotificationAdminStore = defineStore("notificationAdmin", {
-  state: () => ({
-    notificaciones: [],
-    cantidadNoLeidas: 0,
-    cargando: false,
-    cargandoNoLeidas: false,
-  }),
+	state: () => ({
+		notificaciones: [],
+		cantidadNoLeidas: 0,
+		cargando: false,
+		cargandoNoLeidas: false,
+	}),
 
-  getters: {
-    tieneNotificacionesNoLeidas: (state) => state.cantidadNoLeidas > 0,
+	getters: {
+		tieneNotificacionesNoLeidas: (state) => state.cantidadNoLeidas > 0,
 
-    notificacionesNoLeidas: (state) =>
-      state.notificaciones.filter(
-        (notificacion) => notificacion.estado === "NO_LEIDA",
-      ),
-  },
+		notificacionesNoLeidas: (state) =>
+			state.notificaciones.filter(
+				(notificacion) => notificacion.estado === "NO_LEIDA",
+			),
 
-  actions: {
-    // ======================================================
-    // CARGAR TODAS
-    // ======================================================
+		cantidadReservasNoLeidas: (state) =>
+			state.notificaciones.filter(
+				(notificacion) =>
+					notificacion.estado === "NO_LEIDA" && notificacion.tipo === "RESERVA",
+			).length,
+	},
 
-    async cargarNotificaciones() {
-      this.cargando = true;
+	actions: {
+		// ======================================================
+		// CARGAR TODAS
+		// ======================================================
 
-      try {
-        const respuesta = await getNotificacionesAdmin();
+		async cargarNotificaciones() {
+			this.cargando = true;
 
-        this.notificaciones = respuesta.data?.data || [];
+			try {
+				const respuesta = await getNotificacionesAdmin();
 
-        this.cantidadNoLeidas = this.notificaciones.filter(
-          (notificacion) => notificacion.estado === "NO_LEIDA",
-        ).length;
+				this.notificaciones = respuesta.data?.data || [];
 
-        return this.notificaciones;
-      } catch (error) {
-        console.error("❌ ERROR OBTENIENDO NOTIFICACIONES ADMIN:", error);
+				this.cantidadNoLeidas = this.notificaciones.filter(
+					(notificacion) => notificacion.estado === "NO_LEIDA",
+				).length;
 
-        this.notificaciones = [];
-        this.cantidadNoLeidas = 0;
+				return this.notificaciones;
+			} catch (error) {
+				console.error("❌ ERROR OBTENIENDO NOTIFICACIONES ADMIN:", error);
 
-        throw error;
-      } finally {
-        this.cargando = false;
-      }
-    },
+				this.notificaciones = [];
+				this.cantidadNoLeidas = 0;
 
-    // ======================================================
-    // CARGAR NO LEÍDAS
-    // ======================================================
+				throw error;
+			} finally {
+				this.cargando = false;
+			}
+		},
 
-    async cargarNoLeidas() {
-      this.cargandoNoLeidas = true;
+		// ======================================================
+		// CARGAR NO LEÍDAS
+		// ======================================================
 
-      try {
-        const respuesta = await getNotificacionesAdminNoLeidas();
+		async cargarNoLeidas() {
+			this.cargandoNoLeidas = true;
 
-        const data = respuesta.data?.data || [];
-        this.notificaciones = data;
-        const cantidad = respuesta.data?.cantidad;
-        this.cantidadNoLeidas = Number(cantidad) || 0;
-        return data;
-        
-      } catch (error) {
-        console.error(
-          "❌ ERROR OBTENIENDO NOTIFICACIONES ADMIN NO LEÍDAS:",
-          error,
-        );
+			try {
+				const respuesta = await getNotificacionesAdminNoLeidas();
 
-        this.cantidadNoLeidas = 0;
+				const data = respuesta.data?.data || [];
+				this.notificaciones = data;
+				const cantidad = respuesta.data?.cantidad;
+				this.cantidadNoLeidas = Number(cantidad) || 0;
+				return data;
+			} catch (error) {
+				console.error(
+					"❌ ERROR OBTENIENDO NOTIFICACIONES ADMIN NO LEÍDAS:",
+					error,
+				);
 
-        throw error;
-      } finally {
-        this.cargandoNoLeidas = false;
-      }
-    },
+				this.cantidadNoLeidas = 0;
 
-    // ======================================================
-    // OBTENER UNA
-    // ======================================================
+				throw error;
+			} finally {
+				this.cargandoNoLeidas = false;
+			}
+		},
 
-    async obtenerNotificacion(id) {
-      try {
-        const respuesta = await getNotificacionAdminById(id);
+		// ======================================================
+		// OBTENER UNA
+		// ======================================================
 
-        return respuesta.data?.data || null;
-      } catch (error) {
-        console.error("❌ ERROR OBTENIENDO NOTIFICACIÓN ADMIN:", error);
+		async obtenerNotificacion(id) {
+			try {
+				const respuesta = await getNotificacionAdminById(id);
 
-        throw error;
-      }
-    },
+				return respuesta.data?.data || null;
+			} catch (error) {
+				console.error("❌ ERROR OBTENIENDO NOTIFICACIÓN ADMIN:", error);
 
-    // ======================================================
-    // MARCAR UNA COMO LEÍDA
-    // ======================================================
+				throw error;
+			}
+		},
 
-    async marcarComoLeida(id) {
-      try {
-        const respuesta = await marcarNotificacionAdminComoLeida(id);
+		// ======================================================
+		// MARCAR UNA COMO LEÍDA
+		// ======================================================
 
-        const notificacion = respuesta.data?.data;
+		async marcarComoLeida(id) {
+			try {
+				const respuesta = await marcarNotificacionAdminComoLeida(id);
 
-        const index = this.notificaciones.findIndex((item) => item.id === id);
+				const notificacion = respuesta.data?.data;
 
-        if (index !== -1) {
-          this.notificaciones[index] = {
-            ...this.notificaciones[index],
-            ...(notificacion || {}),
-            estado: "LEIDA",
-          };
-        }
+				const index = this.notificaciones.findIndex(
+					(item) => Number(item.id) === Number(id),
+				);
 
-        if (this.cantidadNoLeidas > 0) {
-          this.cantidadNoLeidas--;
-        }
+				if (index !== -1) {
+					const estabaNoLeida =
+						this.notificaciones[index].estado === "NO_LEIDA";
 
-        if (this.cantidadNoLeidas < 0) {
-          this.cantidadNoLeidas = 0;
-        }
+					this.notificaciones[index] = {
+						...this.notificaciones[index],
+						...(notificacion || {}),
+						estado: "LEIDA",
+					};
 
-        return notificacion;
-      } catch (error) {
-        console.error(
-          "❌ ERROR MARCANDO NOTIFICACIÓN ADMIN COMO LEÍDA:",
-          error,
-        );
+					// Disminuir solamente si realmente estaba no leída
+					if (estabaNoLeida && this.cantidadNoLeidas > 0) {
+						this.cantidadNoLeidas--;
+					}
+				}
 
-        throw error;
-      }
-    },
+				return notificacion;
+			} catch (error) {
+				console.error(
+					"❌ ERROR MARCANDO NOTIFICACIÓN ADMIN COMO LEÍDA:",
+					error,
+				);
 
-    // ======================================================
-    // MARCAR NOTIFICACIÓN DE UNA RESERVA COMO LEÍDA
-    // ======================================================
+				throw error;
+			}
+		},
 
-    async marcarNotificacionDeReserva(reservaId) {
-      if (!reservaId) return null;
+		// ======================================================
+		// MARCAR NOTIFICACIÓN DE UNA RESERVA COMO LEÍDA
+		// ======================================================
 
-      const notificacion = this.notificaciones.find(
-        (item) =>
-          Number(item.reserva_id) === Number(reservaId) &&
-          item.estado === "NO_LEIDA",
-      );
+		async marcarNotificacionDeReserva(reservaId) {
+			if (!reservaId) return null;
 
-      if (!notificacion) {
-        return null;
-      }
+			const notificacion = this.notificaciones.find(
+				(item) =>
+					Number(item.reserva_id) === Number(reservaId) &&
+					item.estado === "NO_LEIDA",
+			);
 
-      return await this.marcarComoLeida(notificacion.id);
-    },
+			if (!notificacion) {
+				return null;
+			}
 
-    // ======================================================
-    // MARCAR TODAS COMO LEÍDAS
-    // ======================================================
+			return await this.marcarComoLeida(notificacion.id);
+		},
 
-    async marcarTodasComoLeidas() {
-      try {
-        const respuesta = await marcarTodasNotificacionesAdminComoLeidas();
+		// ======================================================
+		// MARCAR TODAS COMO LEÍDAS
+		// ======================================================
 
-        this.notificaciones = this.notificaciones.map((notificacion) => ({
-          ...notificacion,
-          estado: "LEIDA",
-          fecha_lectura: notificacion.fecha_lectura || new Date().toISOString(),
-        }));
+		async marcarTodasComoLeidas() {
+			try {
+				const respuesta = await marcarTodasNotificacionesAdminComoLeidas();
 
-        this.cantidadNoLeidas = 0;
+				this.notificaciones = this.notificaciones.map((notificacion) => ({
+					...notificacion,
+					estado: "LEIDA",
+					fecha_lectura: notificacion.fecha_lectura || new Date().toISOString(),
+				}));
 
-        return respuesta.data;
-      } catch (error) {
-        console.error(
-          "❌ ERROR MARCANDO TODAS LAS NOTIFICACIONES ADMIN:",
-          error,
-        );
+				this.cantidadNoLeidas = 0;
 
-        throw error;
-      }
-    },
+				return respuesta.data;
+			} catch (error) {
+				console.error(
+					"❌ ERROR MARCANDO TODAS LAS NOTIFICACIONES ADMIN:",
+					error,
+				);
 
-    // ======================================================
-    // RECIBIR NOTIFICACIÓN POR SOCKET.IO
-    // ======================================================
+				throw error;
+			}
+		},
 
-    recibirNotificacion(notificacion) {
-      if (!notificacion) return;
+		// ======================================================
+		// RECIBIR NOTIFICACIÓN POR SOCKET.IO
+		// ======================================================
 
-      // Evitar duplicados
-      const existe = this.notificaciones.some(
-        (item) => item.id === notificacion.id,
-      );
+		recibirNotificacion(notificacion) {
+			if (!notificacion) return;
 
-      if (existe) return;
+			// Evitar duplicados
+			const existe = this.notificaciones.some(
+				(item) => item.id === notificacion.id,
+			);
 
-      this.notificaciones.unshift(notificacion);
+			if (existe) return;
 
-      if (notificacion.estado === "NO_LEIDA") {
-        this.cantidadNoLeidas++;
-      }
-    },
+			this.notificaciones.unshift(notificacion);
 
-    // ======================================================
-    // LIMPIAR
-    // ======================================================
+			if (notificacion.estado === "NO_LEIDA") {
+				this.cantidadNoLeidas++;
+			}
+		},
 
-    limpiar() {
-      this.notificaciones = [];
-      this.cantidadNoLeidas = 0;
-      this.cargando = false;
-      this.cargandoNoLeidas = false;
-    },
-  },
+		// ======================================================
+		// LIMPIAR
+		// ======================================================
+
+		limpiar() {
+			this.notificaciones = [];
+			this.cantidadNoLeidas = 0;
+			this.cargando = false;
+			this.cargandoNoLeidas = false;
+		},
+
+		// ======================================================
+		// SINCRONIZAR NOTIFICACIÓN CUANDO SE ATIENDE UNA RESERVA
+		// ======================================================
+
+		sincronizarNotificacionReservaLeida(reservaId) {
+			if (!reservaId) return;
+
+			const index = this.notificaciones.findIndex(
+				(item) =>
+					Number(item.reserva_id) === Number(reservaId) &&
+					item.estado === "NO_LEIDA",
+			);
+
+			// Si no existe una notificación pendiente, no hacemos nada.
+			if (index === -1) return;
+
+			// Actualizar el estado local
+			this.notificaciones[index] = {
+				...this.notificaciones[index],
+				estado: "LEIDA",
+				fecha_lectura:
+					this.notificaciones[index].fecha_lectura || new Date().toISOString(),
+			};
+
+			// Actualizar el contador
+			this.cantidadNoLeidas = Math.max(0, this.cantidadNoLeidas - 1);
+		},
+	},
 });

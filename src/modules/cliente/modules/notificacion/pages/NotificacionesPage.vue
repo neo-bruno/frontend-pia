@@ -342,42 +342,30 @@ export default {
 
     obtenerTipo(notificacion) {
       const tipo = String(
-          notificacion.tipo ||
-          notificacion.tipo_notificacion ||
-          ""
-        )
-        .toLowerCase()
-        .trim();
+        notificacion.tipo ||
+        notificacion.tipo_notificacion ||
+        ""
+      ).toLowerCase().trim();
 
-      if (tipo.includes("reserva")) {
-        return "reserva";
+      const titulo = String(notificacion.titulo || "").toLowerCase();
+      const mensaje = String(notificacion.mensaje || "").toLowerCase();
+
+      // Comprobante: se evalúa antes que RESERVA
+      if (
+        titulo.includes("comprobante") ||
+        mensaje.includes("comprobante")
+      ) {
+        return "comprobante";
       }
 
-      if (tipo.includes("pago")) {
-        return "pago";
-      }
-
-      if (tipo.includes("promocion") ||
-        tipo.includes("promoción")) {
-        return "promocion";
-      }
-
-      if (tipo.includes("descuento")) {
-        return "descuento";
-      }
-
-      if (tipo.includes("servicio")) {
-        return "servicio";
-      }
-
-      if (tipo.includes("membresia") ||
-        tipo.includes("membresía")) {
-        return "membresia";
-      }
-
-      if (tipo.includes("evaluacion_pendiente")) {
-        return "calificacion";
-      }
+      if (tipo.includes("comprobante")) return "comprobante";
+      if (tipo.includes("reserva")) return "reserva";
+      if (tipo.includes("pago")) return "pago";
+      if (tipo.includes("promocion") || tipo.includes("promoción")) return "promocion";
+      if (tipo.includes("descuento")) return "descuento";
+      if (tipo.includes("servicio")) return "servicio";
+      if (tipo.includes("membresia") || tipo.includes("membresía")) return "membresia";
+      if (tipo.includes("evaluacion_pendiente")) return "calificacion";
 
       return "general";
     },
@@ -410,6 +398,7 @@ export default {
         servicio: "mdi-content-cut",
         membresia: "mdi-card-account-details-outline",
         general: "mdi-bell-outline",
+        comprobante: "mdi-receipt-text-check-outline",
       };
 
       return iconos[tipo] || iconos.general;
@@ -437,6 +426,7 @@ export default {
         membresia: "Membresía",
         calificacion: "Califica tu experiencia",
         general: "Nueva notificación",
+        comprobante: "Comprobante de pago",
       };
 
       return titulos[this.obtenerTipo(notificacion)];
@@ -469,6 +459,7 @@ export default {
         membresia: "Ver membresía",
         calificacion: "Calificar servicio",
         general: "Ver detalle",
+        comprobante: "Ver comprobante",
       };
 
       return textos[this.obtenerTipo(notificacion)];
@@ -539,10 +530,30 @@ export default {
     },
 
     // ======================================================
-    // ABRIR NOTIFICACIÓN
+    // ABRIR NOTIFICACIÓN Y MARCAR COMO LEÍDA
     // ======================================================
-    abrirNotificacion(notificacion) {
-      // Abrir el detalle sin cambiar el estado de la notificación.
+
+    async abrirNotificacion(notificacion) {
+      try {
+        // Marcar como leída solamente si todavía está pendiente
+        if (!this.estaLeida(notificacion)) {
+          await marcarNotificacionComoLeida(notificacion.id);
+
+          // Actualizar estado local
+          this.actualizarComoLeida(notificacion);
+
+          // Actualizar contador global del cliente
+          await useNotificationStore().cargarNoLeidas();
+        }
+
+      } catch (error) {
+        console.error(
+          "Error marcando notificación como leída:",
+          error
+        );
+      }
+
+      // Abrir el detalle aunque falle la actualización del estado
       this.irAlDetalle(notificacion);
     },
 
@@ -550,7 +561,6 @@ export default {
     // ======================================================
     // ACTUALIZAR ESTADO LOCAL
     // ======================================================
-
     actualizarComoLeida(notificacion) {
       if ("leida" in notificacion) {
         notificacion.leida = true;
@@ -571,7 +581,7 @@ export default {
 
     irAlDetalle(notificacion) {
       const tipo = this.obtenerTipo(notificacion);
-
+      console.log('TIPO: ', tipo)
       switch (tipo) {
         case "reserva":
           this.$router.push({
@@ -625,6 +635,17 @@ export default {
               id: notificacion.id,
               reserva_id: notificacion.reserva_id,
               evaluacion_id: notificacion.evaluacion_id,
+            },
+          });
+          break;
+
+        case "comprobante":
+          this.$router.push({
+            name: "cliente.notificaciones.pago",
+            query: {
+              id: notificacion.pago_id,
+              reserva_id: notificacion.reserva_id,
+              notificacion_id: notificacion.id,
             },
           });
           break;
@@ -922,6 +943,11 @@ export default {
 .tipo-general {
   background: #f1f5f6;
   color: #617785;
+}
+
+.tipo-comprobante {
+  background: #eaf7f6;
+  color: #0f8f8c;
 }
 
 /* ==========================================================

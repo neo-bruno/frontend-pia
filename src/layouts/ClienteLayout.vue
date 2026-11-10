@@ -7,15 +7,24 @@
 
   <header class="pia-client-header">
 
-    <!-- MARCA -->
-    <div class="pia-brand" @click="irInicio">
-      <div class="pia-logo">
-        PIA
+    
+    <!-- MARCA Y REGRESO -->
+    <div class="pia-brand-container">
+
+      <v-btn v-if="mostrarRegresoSoporte" icon variant="text" class="header-back-btn" @click="volverSoporte">
+        <v-icon size="27">mdi-arrow-left</v-icon>
+      </v-btn>
+
+      <div class="pia-brand" @click="irInicio">
+        <div class="pia-logo">
+          PIA
+        </div>
+
+        <div class="pia-subtitle">
+          TU ESPACIO COMO CLIENTE
+        </div>
       </div>
 
-      <div class="pia-subtitle">
-        TU ESPACIO COMO CLIENTE
-      </div>
     </div>
 
     <!-- ACCIONES -->
@@ -140,9 +149,20 @@ export default {
     notificaciones() {
       return this.notificationStore.cantidadNoLeidas;
     },
+
+    mostrarRegresoSoporte() {
+      return (
+        this.$route.path.startsWith("/cliente/soporte/") &&
+        this.$route.path !== "/cliente/soporte"
+      );
+    },
   },
 
   methods: {
+    volverSoporte() {
+      this.$router.push("/cliente/soporte");
+    },
+
     irInicio() {
       this.$router.push({
         path: "/",
@@ -596,5 +616,22 @@ export default {
 
   }
 
+}
+
+.pia-brand-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-back-btn {
+  width: 38px !important;
+  height: 38px !important;
+  color: #008f9b !important;
+  flex-shrink: 0;
+}
+
+.pia-brand {
+  cursor: pointer;
 }
 </style>

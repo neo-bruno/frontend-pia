@@ -5,6 +5,7 @@ import favoritoRoutes from "@/modules/cliente/modules/favoritos/routes";
 import NotificationRoutes from "@/modules/cliente/modules/notificacion/routes";
 import DescuentosRoutes from "@/modules/cliente/modules/descuentos/routes";
 import ReprogramacionRoutes from "@/modules/cliente/modules/reprogramacion/routes";
+import soporteRoutes from "@/modules/cliente/modules/soporte/routes";
 
 const routes = [
 	{
@@ -29,6 +30,7 @@ const routes = [
 			...NotificationRoutes,
 			...DescuentosRoutes,
 			...ReprogramacionRoutes,
+			...soporteRoutes,
 		],
 	},
 ];

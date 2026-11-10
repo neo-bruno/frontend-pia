@@ -21,10 +21,10 @@
 
     </div>
 
-    <v-btn icon variant="text">
-
-      <v-icon>mdi-heart-outline</v-icon>
-
+    <v-btn icon variant="text" :disabled="procesandoFavorito" @click="toggleFavorito">
+      <v-icon :color="favorito ? '#079ba3' : undefined">
+        {{ favorito ? 'mdi-heart' : 'mdi-heart-outline' }}
+      </v-icon>
     </v-btn>
 
   </div>
@@ -528,22 +528,13 @@
 </template>
 
 <script>
-import {
-  useReservaStore
-} from '@/stores/reserva.store.js';
-
+import { useReservaStore } from '@/stores/reserva.store.js';
 import LoginCliente from '../../cliente/components/LoginCliente.vue';
-
-import {
-  fechaHoy,
-  getFileUrl
-} from '@/utils/ayuda'
-
-import {
-  getAvailableSchedule
-} from '../services/horario.api';
-
+import { fechaHoy, getFileUrl } from '@/utils/ayuda'
+import { getAvailableSchedule } from '../services/horario.api';
 import DialogoSeleccionServicios from '../../servicios/components/DialogoSeleccionServicios.vue';
+
+import { getFavoritos, agregarFavorito, eliminarFavorito, } from '../../../../cliente/modules/favoritos/services/favorito.api.js';
 
 export default {
 
@@ -594,6 +585,10 @@ export default {
       diasDisponibles: 30,
 
       dias: [],
+
+      favorito: false,
+      favoritoPendiente: false,
+      procesandoFavorito: false,
 
     }
 
@@ -684,6 +679,108 @@ export default {
     fechaHoy,
 
     getFileUrl,
+
+    // ==============================================
+    // FAVORITOS DEL PROFESIONAL
+    // ==============================================
+
+    async verificarFavorito() {
+      const token = localStorage.getItem('cliente_token');
+
+      if (!token || !this.datos?.profesional?.id) {
+        this.favorito = false;
+        return;
+      }
+
+      try {
+        const respuesta = await getFavoritos();
+        const datos = respuesta?.data?.data || {};
+
+        const favoritos = (datos.profesionales || []).map(
+          profesional => Number(profesional.id)
+        );
+
+        this.favorito = favoritos.includes(
+          Number(this.datos.profesional.id)
+        );
+
+      } catch (error) {
+        console.error(
+          'Error al verificar favorito:',
+          error
+        );
+      }
+    },
+
+    async toggleFavorito() {
+      if (!localStorage.getItem('cliente_token')) {
+        this.favoritoPendiente = true;
+        this.dialogoLoginCliente = true;
+        return;
+      }
+
+      await this.actualizarFavorito();
+    },
+
+    async actualizarFavorito() {
+      if (
+        this.procesandoFavorito ||
+        !this.datos?.profesional?.id
+      ) return;
+
+      if (!localStorage.getItem('cliente_token')) {
+        this.favoritoPendiente = true;
+        this.dialogoLoginCliente = true;
+        return;
+      }
+
+      const profesionalId = Number(
+        this.datos.profesional.id
+      );
+
+      const eraFavorito = this.favorito;
+
+      this.procesandoFavorito = true;
+
+      try {
+        if (eraFavorito) {
+          await eliminarFavorito('PROFESIONAL', profesionalId);
+        } else {
+          await agregarFavorito('PROFESIONAL', profesionalId);
+        }
+
+        this.favorito = !eraFavorito;
+
+        this.$piaAlert.success(
+          this.favorito
+            ? 'Profesional agregado a favoritos.'
+            : 'Profesional eliminado de favoritos.'
+        );
+
+      } catch (error) {
+        console.error(
+          'Error al actualizar favorito:',
+          error
+        );
+
+        if (error.response?.status === 401) {
+          this.favoritoPendiente = true;
+          this.dialogoLoginCliente = true;
+
+          this.$piaAlert.info(
+            'Tu sesión ha expirado. Inicia sesión nuevamente.'
+          );
+        } else {
+          this.$piaAlert.error(
+            error.response?.data?.mensaje ||
+            'No se pudo actualizar el favorito.'
+          );
+        }
+
+      } finally {
+        this.procesandoFavorito = false;
+      }
+    },
 
     mostrarMensajeHorarioNoDisponible(slot) {
 
@@ -837,20 +934,6 @@ export default {
 
         this.overlay = true
 
-        console.log(
-
-          '🔎 OBTENIENDO HORARIOS:', {
-
-            profesionalId: this.profesionalId,
-
-            servicioId: this.servicioId,
-
-            fecha: this.fechaSeleccionada
-
-          }
-
-        )
-
         const res = await getAvailableSchedule(
 
           this.profesionalId,
@@ -862,17 +945,8 @@ export default {
         )
 
         if (res.data.ok) {
-
-          console.log(
-
-            '📋 HORARIOS RECIBIDOS:',
-
-            res.data.data
-
-          )
-
-          this.datos = res.data.data
-
+          this.datos = res.data.data;
+          await this.verificarFavorito();
         }
 
       } catch (error) {
@@ -1150,45 +1224,40 @@ export default {
     },
 
     async clienteAutenticado(datosCliente) {
+      console.log('👤 CLIENTE AUTENTICADO:', datosCliente);
 
-      console.log('👤 CLIENTE AUTENTICADO:', datosCliente)
+      if (!datosCliente?.token) return;
 
-      // --------------------------------------------------
+      this.clienteActual = datosCliente;
+      this.dialogoLoginCliente = false;
 
-      // GUARDAMOS TOKEN SI EL BACKEND LO DEVUELVE
+      // ==========================================
+      // COMPLETAR FAVORITO PENDIENTE
+      // ==========================================
 
-      // --------------------------------------------------
+      if (this.favoritoPendiente) {
+        this.favoritoPendiente = false;
 
-      if (datosCliente?.token) {
-
-        this.clienteActual = datosCliente
-
-        this.reservaPendiente.cliente_id = datosCliente.id
-
-        // --------------------------------------------------
-
-        // CERRAMOS LOGIN
-
-        // --------------------------------------------------
-
-        this.dialogoLoginCliente = false
-
-        // --------------------------------------------------
-
-        // CONTINUAMOS CON LA RESERVA
-
-        // --------------------------------------------------
-
-        await this.continuarConReserva()
-
+        await this.actualizarFavorito();
       }
 
+      // ==========================================
+      // CONTINUAR RESERVA PENDIENTE
+      // ==========================================
+
+      if (this.reservaPendiente) {
+        this.reservaPendiente.cliente_id = datosCliente.id;
+
+        console.log(
+          '✅ CLIENTE AUTENTICADO → CONTINUAR RESERVA'
+        );
+
+        await this.continuarConReserva();
+      }
     },
 
     // ==============================================
-
     // URL DE ARCHIVOS
-
     // ==============================================
 
     async continuarConReserva() {
@@ -1690,7 +1759,7 @@ export default {
 
 .cliente-card {
   margin-top: 8px;
-  background: #effafa;
+  background: #fff;
   border-color: #d5eeee;
 }
 
