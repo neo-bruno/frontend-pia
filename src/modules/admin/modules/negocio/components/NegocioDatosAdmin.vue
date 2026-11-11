@@ -885,11 +885,26 @@ export default {
     },
 
     verVistaPrevia() {
-      // No se inventa una ruta pública que todavía no esté confirmada.
-      this.$piaAlert.info(
-        "La vista previa estará disponible cuando esté implementada la página pública del negocio.",
-        { title: "Página pública" }
-      );
+      const slug = this.form?.slug;
+
+      if (!slug) {
+        this.$piaAlert.error(
+          "No se encontró el identificador público del negocio. Verifica que el negocio tenga una página configurada.",
+          { title: "Vista previa no disponible" }
+        );
+        return;
+      }
+
+      this.$router.push({
+        path: `/perfil/negocio/${encodeURIComponent(slug)}`
+      }).catch((error) => {
+        console.error("Error al abrir la vista previa:", error);
+
+        this.$piaAlert.error(
+          "No fue posible abrir la página pública del negocio.",
+          { title: "Error de navegación" }
+        );
+      });
     },
   },
 };

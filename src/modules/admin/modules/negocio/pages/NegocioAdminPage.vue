@@ -84,6 +84,29 @@
       </v-icon>
     </v-card>
 
+    <!-- Código de invitación -->
+    <v-card class="opcion-card" elevation="0" rounded="lg" @click="irA('negocio-codigo-invitacion')">
+      <div class="icon-container">
+        <v-icon size="24">
+          mdi-ticket-confirmation-outline
+        </v-icon>
+      </div>
+
+      <div class="opcion-contenido">
+        <div class="opcion-titulo">
+          Código de invitación
+        </div>
+
+        <div class="opcion-descripcion">
+          Comparte el código para incorporar profesionales a tu negocio.
+        </div>
+      </div>
+
+      <v-icon class="flecha">
+        mdi-chevron-right
+      </v-icon>
+    </v-card>
+
     <!-- Página del negocio -->
     <v-card class="opcion-card" elevation="0" rounded="lg" @click="irA('negocio-pagina')">
       <div class="icon-container">

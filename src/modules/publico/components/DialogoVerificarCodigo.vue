@@ -32,7 +32,7 @@
           v-model="codigo"
           autofocus
           label="Código del negocio"
-          placeholder="NEG-DA2DF"
+          placeholder="PIA-KZ4ENW"
           variant="outlined"
           prepend-inner-icon="mdi-key-outline"
           :loading="loading"
@@ -41,7 +41,7 @@
           maxlength="12"
           counter="12"
           @keyup.enter="verificarCodigo"
-          @input="formatearCodigo"
+          @update:model-value="formatearCodigo"
         />
 
         <!-- NEGOCIO ENCONTRADO -->
@@ -153,17 +153,16 @@ export default {
   methods: {
 
     formatearCodigo() {
-      let valor = this.codigo.toUpperCase().replace(/[^A-Z0-9-]/g, "");
+      // Convertir a mayúsculas y eliminar espacios
+      const valor = String(this.codigo || "")
+        .toUpperCase()
+        .replace(/\s+/g, "")
+        .replace(/[^A-Z0-9-]/g, "");
 
-      // Siempre comenzar con NEG-
-      if (!valor.startsWith("NEG-")) {
-        valor = "NEG-" + valor.replace(/^NEG-?/, "");
-      }
+      // No forzar ningún prefijo.
+      // Permitir códigos NEG- y PIA-.
+      this.codigo = valor.slice(0, 12);
 
-      // Tomamos únicamente los 5 caracteres después de NEG-
-      const codigo = valor.substring(4, 12);
-
-      this.codigo = `NEG-${codigo}`;
       this.error = "";
     },
 

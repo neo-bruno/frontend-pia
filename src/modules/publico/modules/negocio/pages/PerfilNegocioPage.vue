@@ -7,7 +7,7 @@
     </button>
 
     <div class="page-header-text">
-      <h1>Página del negocio</h1>
+      <h1>Página del Negocio</h1>
       <p>Conoce más sobre este establecimiento en PIA.</p>
     </div>
   </section>
@@ -63,6 +63,16 @@
 
       <div class="identidad-negocio">
         <h2>{{ negocio.nombre }}</h2>
+
+        <p v-if="negocio.eslogan || negocio.lema" class="lema-identidad">
+          “{{ negocio.eslogan || negocio.lema }}”
+        </p>
+
+        <span v-if="negocio.tipo_negocio" class="categoria-negocio">
+          <v-icon size="14">mdi-storefront-outline</v-icon>
+          {{ negocio.tipo_negocio }}
+        </span>
+
         <p v-if="negocio.descripcion" class="subtitulo">
           {{ negocio.descripcion }}
         </p>
@@ -144,8 +154,18 @@
         </button>
       </div>
 
-      <div v-if="negocio.lema" class="lema-negocio">
-        “{{ negocio.lema }}”
+      <!-- CONTACTO -->
+      <div v-if="negocio.telefono" class="contacto-compacto">
+        <span class="contacto-icono">
+          <v-icon size="18">mdi-phone-outline</v-icon>
+        </span>
+        <div class="contacto-datos">
+          <small>Teléfono de contacto</small>
+          <strong>{{ negocio.telefono }}</strong>
+        </div>
+        <button type="button" class="contacto-llamar" @click="llamarNegocio">
+          Llamar
+        </button>
       </div>
 
       <!-- UBICACIÓN -->
@@ -209,18 +229,25 @@
       </section>
 
       <!-- SOBRE EL NEGOCIO -->
-      <section class="bloque sobre-bloque">
+      <section v-if="negocio.informacion || negocio.descripcion" class="bloque sobre-bloque">
         <h3>
           <v-icon color="primary">mdi-text-box-outline</v-icon>
           Sobre nosotros
         </h3>
 
-        <p v-if="negocio.descripcion">
-          {{ negocio.descripcion }}
+        <p>
+          {{ negocio.informacion || negocio.descripcion }}
         </p>
-        <p v-else class="texto-secundario">
-          Este negocio todavía no ha añadido una descripción.
-        </p>
+      </section>
+
+      <!-- RECOMENDACIONES -->
+      <section v-if="negocio.recomendacion" class="bloque sobre-bloque">
+        <h3>
+          <v-icon color="primary">mdi-lightbulb-on-outline</v-icon>
+          Recomendaciones para nuestros clientes
+        </h3>
+
+        <p>{{ negocio.recomendacion }}</p>
       </section>
       
 
@@ -2109,4 +2136,417 @@ export default {
 .estado-negocio.sin-horario .estado-punto {
   background: #718096;
 }
+
+
+/* =========================================================
+   PERFIL DE NEGOCIO PIA — AJUSTE COMPACTO MOBILE FIRST
+   Mantiene la estructura y funcionalidades existentes.
+   ========================================================= */
+
+.negocio-page {
+  padding-bottom: 12px;
+  background: #f4f9f8;
+}
+
+.page-header {
+  padding: 8px 12px;
+  gap: 9px;
+  background: #fff;
+}
+
+.back-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  box-shadow: none;
+}
+
+.page-header-text h1 {
+  font-size: 17px;
+}
+
+.page-header-text p {
+  font-size: 10px;
+}
+
+.tabs-negocio {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  gap: 5px;
+  padding: 5px 10px 8px;
+  background: rgba(255, 255, 255, .97);
+  border-bottom: 1px solid #e7eeee;
+}
+
+.tabs-negocio button {
+  min-height: 40px;
+  border-radius: 9px;
+  font-size: 10px;
+  gap: 4px;
+}
+
+.tabs-negocio button .v-icon {
+  font-size: 16px;
+}
+
+.contenido {
+  padding: 8px 12px 14px;
+}
+
+.portada-container {
+  height: clamp(132px, 42vw, 166px);
+  margin: 0;
+  border-radius: 14px;
+}
+
+.portada,
+.portada-vacia {
+  border-radius: 14px;
+}
+
+.logo-negocio {
+  left: 12px;
+  bottom: -20px;
+  width: 68px;
+  height: 68px;
+  border-width: 3px;
+}
+
+.identidad-negocio {
+  margin-top: 12px;
+  padding: 23px 11px 10px;
+  border-radius: 13px;
+  box-shadow: 0 2px 8px rgba(16, 44, 78, .035);
+}
+
+.identidad-negocio h2 {
+  font-size: clamp(18px, 5vw, 21px);
+  line-height: 1.2;
+}
+
+.lema-identidad {
+  margin: 3px 0 7px;
+  color: #008f91;
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.categoria-negocio {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 5px;
+  padding: 4px 8px;
+  border-radius: 20px;
+  background: #e8f7f5;
+  color: #008f91;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.subtitulo {
+  margin: 3px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.calificacion-negocio {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.calificacion-datos {
+  gap: 4px;
+  font-size: 12px;
+}
+
+.verificado {
+  padding: 2px 6px;
+  font-size: 10px;
+}
+
+.distancia-negocio {
+  font-size: 11px;
+}
+
+.estado-negocio {
+  margin-top: 5px;
+  padding: 3px 8px;
+  font-size: 10px;
+}
+
+.acciones-negocio {
+  margin-top: 8px;
+  padding: 9px 5px 8px;
+  gap: 2px;
+  border-radius: 13px;
+  box-shadow: 0 2px 8px rgba(16, 44, 78, .035);
+}
+
+.accion {
+  gap: 4px;
+  font-size: 10px;
+}
+
+.accion-icono {
+  width: 40px;
+  height: 40px;
+}
+
+.accion-icono .v-icon {
+  font-size: 21px;
+}
+
+.contacto-compacto {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 9px;
+  padding: 9px 10px;
+  border: 1px solid #e3eeee;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.contacto-icono {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 50%;
+  color: #008f91;
+  background: #e8f7f5;
+}
+
+.contacto-datos {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.contacto-datos small {
+  color: #74869a;
+  font-size: 9px;
+}
+
+.contacto-datos strong {
+  color: #102c4e;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.contacto-llamar {
+  padding: 6px 10px;
+  border: 1px solid #bfe5e1;
+  border-radius: 8px;
+  color: #008f91;
+  background: #f3fbfa;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.bloque {
+  margin-top: 9px;
+  margin-bottom: 9px;
+  padding: 11px;
+  border-radius: 13px;
+  box-shadow: 0 2px 8px rgba(16, 44, 78, .035);
+}
+
+.bloque h3,
+.horarios-bloque h3,
+.sobre-bloque h3 {
+  gap: 7px;
+  margin-bottom: 8px;
+  padding-bottom: 7px;
+  font-size: 14px;
+}
+
+.titulo-ubicacion {
+  gap: 8px;
+  padding: 2px 0 8px;
+}
+
+.titulo-ubicacion > .v-icon {
+  font-size: 23px !important;
+}
+
+.titulo-ubicacion strong {
+  font-size: 14px;
+}
+
+.direccion,
+.localidad {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.mapa-preview {
+  height: 112px;
+  border-radius: 10px;
+}
+
+.mapa-link {
+  right: 6px;
+  bottom: 6px;
+  padding: 6px 8px;
+  font-size: 10px;
+}
+
+.sin-mapa {
+  padding: 11px;
+  font-size: 11px;
+}
+
+.botones-ubicacion {
+  margin-top: 7px;
+  gap: 6px;
+}
+
+.botones-ubicacion :deep(.v-btn) {
+  min-height: 34px;
+  height: 34px;
+  font-size: 10px;
+}
+
+.horarios-bloque {
+  padding: 11px;
+}
+
+.horario-item {
+  padding: 7px 1px;
+  font-size: 11px;
+}
+
+.horario-dia {
+  min-width: 68px;
+  font-size: 11px;
+}
+
+.horario-turnos {
+  gap: 2px;
+}
+
+.horario-turnos strong {
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.sobre-bloque p {
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.reservar-boton {
+  min-height: 46px;
+  margin-top: 3px;
+  font-size: 14px;
+}
+
+@media (max-width: 360px) {
+  .contenido {
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+
+  .tabs-negocio {
+    padding-right: 7px;
+    padding-left: 7px;
+  }
+
+  .tabs-negocio button {
+    font-size: 9px;
+  }
+
+  .acciones-negocio {
+    padding-right: 2px;
+    padding-left: 2px;
+  }
+
+  .accion {
+    font-size: 9px;
+  }
+
+  .accion-icono {
+    width: 37px;
+    height: 37px;
+  }
+
+}
+
+@media (min-width: 700px) {
+  .portada-container {
+    height: 210px;
+  }
+
+  .contenido {
+    padding: 12px 22px 20px;
+  }
+}
+
+
+/* Corrección de distribución superior y tamaño del mapa */
+.calificacion-negocio {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 4px;
+}
+
+.calificacion-datos {
+  min-width: 0;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.distancia-negocio {
+  justify-self: end;
+  white-space: nowrap;
+}
+
+.estado-negocio {
+  grid-column: 1 / -1;
+  justify-self: end;
+  margin: 2px 0 0 auto;
+}
+
+.mapa-preview {
+  height: clamp(260px, 50vh, 340px);
+  min-height: 260px;
+}
+
+@media (max-width: 360px) {
+  .calificacion-negocio {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .calificacion-datos {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+
+  .distancia-negocio {
+    justify-self: end;
+  }
+
+  .estado-negocio {
+    justify-self: end;
+    margin-left: auto;
+  }
+
+  .mapa-preview {
+    height: 50vh;
+    min-height: 260px;
+    max-height: 320px;
+  }
+}
+
 </style>

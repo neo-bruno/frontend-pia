@@ -20,6 +20,10 @@
     <button v-if="textoBusqueda" type="button" class="clear-button" aria-label="Borrar búsqueda" @click="limpiarBusqueda">
       <v-icon size="20">mdi-close</v-icon>
     </button>
+    
+    <button class="search-submit" type="button" aria-label="Buscar" @click="buscar">
+      <v-icon size="20" color="white">mdi-send</v-icon>
+    </button>
   </form>
 
   <!-- CONTADOR Y ORDENAMIENTO -->
@@ -589,19 +593,22 @@ export default {
     limpiarBusqueda() {
       this.textoBusqueda = '';
 
-      this.$router.push({
-        name: 'publico'
-      });
+      // this.$router.push({
+      //   name: 'publico'
+      // });
     },
 
     volver() {
-      if (window.history.length > 1) {
-        this.$router.back();
-      } else {
-        this.$router.push({
+      this.$router.push({
           name: 'publico'
         });
-      }
+      // if (window.history.length > 1) {
+      //   this.$router.back();
+      // } else {
+      //   this.$router.push({
+      //     name: 'publico'
+      //   });
+      // }
     },
 
     abrirServicio(servicio) {
@@ -791,6 +798,24 @@ export default {
   color: #8492a8;
 }
 
+.search-submit-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 20px;
+  background: #079b98;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
 .search-panel input::-webkit-search-cancel-button {
   display: none;
 }
@@ -806,6 +831,19 @@ export default {
   border-radius: 50%;
   background: transparent;
   color: #64748b;
+  cursor: pointer;
+}
+
+.search-submit {
+  display: grid;
+  place-items: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #079b98;
   cursor: pointer;
 }
 

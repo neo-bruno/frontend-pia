@@ -51,3 +51,8 @@ export function subirImagenesNegocio({ portada, logo }) {
 export function getEstadoHorarioNegocio() {
 	return http().get("/negocio-admin/mi-negocio/estado-horario");
 }
+
+// Generar nuevo código de invitación del negocio
+export function generarNuevoCodigoNegocio() {
+	return http().post("/negocio-admin/mi-negocio/codigo");
+}

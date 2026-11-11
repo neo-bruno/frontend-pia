@@ -1,3 +1,4 @@
+import NegocioCodigoActivacionAdmin from "../components/NegocioCodigoActivacionAdmin.vue";
 import NegocioDatosAdmin from "../components/NegocioDatosAdmin.vue";
 import NegocioFotosAdmin from "../components/NegocioFotosAdmin.vue";
 import NegocioHorariosAdmin from "../components/NegocioHorariosAdmin.vue";
@@ -34,6 +35,12 @@ const routes = [
 		meta: {
 			requiresAuth: true,
 		},
+	},
+
+	{
+		path: "negocio/codigo-invitacion",
+		name: "negocio-codigo-invitacion",
+		component: NegocioCodigoActivacionAdmin,
 	},
 
 	{

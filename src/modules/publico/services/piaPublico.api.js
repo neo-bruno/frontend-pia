@@ -20,3 +20,11 @@ export function getServicios(params = {}) {
 export function getServiciosConDescuentoPublico() {
 	return http().get("/pia-publico/servicios/descuentos");
 }
+
+export function buscarNegociosPublicos(params = {}) {
+	return http().get("/pia-publico/busqueda/negocios", { params });
+}
+
+export function buscarServiciosPublicos(params = {}) {
+	return http().get("/pia-publico/busqueda/servicios", { params });
+}

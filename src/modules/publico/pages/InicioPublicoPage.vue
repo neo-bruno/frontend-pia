@@ -166,9 +166,20 @@
       </h3>
       <v-btn icon="mdi-close" variant="text" size="small" @click="hojaUbicacion = false" />
     </div>
-    <button class="use-location" type="button" @click="detectarUbicacion">
-      <v-icon size="24">mdi-crosshairs-gps</v-icon><span><strong>Usar mi ubicación actual</strong><small>Detectar ubicación con GPS</small></span>
+    <button
+      class="use-location"
+      type="button"
+      :disabled="cargandoUbicacion"
+      @click="detectarUbicacion"
+    >
+      <v-progress-circular v-if="cargandoUbicacion" indeterminate color="#079b98" size="24" width="2" />
+      <v-icon v-else size="24">mdi-crosshairs-gps</v-icon>
+      <span>
+        <strong>{{ cargandoUbicacion ? "Obteniendo tu ubicación..." : "Usar mi ubicación actual" }}</strong>
+        <small>{{ cargandoUbicacion ? "Calculando distancias y actualizando resultados" : "Detectar ubicación con GPS" }}</small>
+      </span>
     </button>
+    <p v-if="errorUbicacion" class="text-error text-caption mt-2">{{ errorUbicacion }}</p>
     <v-text-field v-model="busquedaUbicacion" placeholder="Buscar ciudad o departamento..." prepend-inner-icon="mdi-magnify" variant="solo-filled" flat hide-details rounded="lg" class="sheet-search" />
     <div class="location-options">
       <button v-for="lugar in ubicacionesFiltradas" :key="lugar.departamento + lugar.municipio" type="button" @click="seleccionarUbicacion(lugar)">
@@ -189,15 +200,15 @@
       </h3><button class="text-action" type="button" @click="limpiarFiltros">Limpiar</button>
     </div>
     <p class="filter-label">¿Qué buscas?</p>
-    <div class="filter-type-row"><button v-for="tipo in tiposBusqueda" :key="tipo.value" type="button" :class="{ selected: tipoBusqueda === tipo.value }" @click="tipoBusqueda = tipo.value">{{ tipo.label }}</button></div>
+    <div class="filter-type-row"><button v-for="tipo in tiposBusqueda" :key="tipo.value" type="button" :class="{ selected: tipoBusqueda === tipo.value }" @click="cambiarTipoBusqueda(tipo.value)">{{ tipo.label }}</button></div>
     <p class="filter-label">Ubicación</p>
-    <button class="filter-select" type="button" @click="hojaFiltros = false; hojaUbicacion = true">
+    <button class="filter-select" type="button" @click="abrirUbicacionDesdeFiltros">
       <v-icon>mdi-map-marker-outline</v-icon><span>{{ municipioSeleccionado || departamentoSeleccionado || "Todas las ubicaciones" }}</span>
       <v-icon>mdi-chevron-right</v-icon>
     </button>
     <p class="filter-label">Categoría</p>
     <button class="filter-select" type="button" @click="hojaFiltros = false; hojaCategorias = true">
-      <v-icon>mdi-shape-outline</v-icon><span>{{ categoriaSeleccionada?.nombre || "Todas las categorías" }}</span>
+      <v-icon>mdi-shape-outline</v-icon><span>{{ categoriaSeleccionada?.nombre || (tipoBusqueda === 'profesional' ? 'Todos los tipos' : 'Todas las categorías') }}</span>
       <v-icon>mdi-chevron-right</v-icon>
     </button>
     <v-btn block color="#079b98" class="apply-filters" rounded="lg" @click="aplicarFiltros">Aplicar filtros</v-btn>
@@ -210,7 +221,8 @@
     <div class="sheet-handle"></div>
     <div class="sheet-heading">
       <h3>
-        <v-icon color="#079b98" class="mr-2">mdi-store</v-icon>Categorías
+        <v-icon color="#079b98" class="mr-2">{{ tipoBusqueda === 'profesional' ? 'mdi-account-tie' : 'mdi-store' }}</v-icon>
+        {{ tipoBusqueda === 'profesional' ? 'Tipos de profesional' : 'Categorías' }}
       </h3>
       <v-btn icon="mdi-close" variant="text" size="small" @click="hojaCategorias = false" />
     </div>
@@ -285,6 +297,169 @@
         Prueba con otra categoría para descubrir más opciones.
       </span>
     </div>
+
+    <!-- NEGOCIOS ENCONTRADOS -->
+    <div v-else class="sheet-categoria-lista">
+      <button v-for="negocio in negociosCategoria" :key="negocio.id" type="button" class="negocio-categoria-item" @click="abrirNegocio(negocio)">
+        <v-img :src="getFileUrl(negocio.imagen || negocio.logo || negocio.portada || negocio.imagen_portada)" cover class="negocio-categoria-imagen">
+          <template #placeholder>
+            <div class="negocio-categoria-placeholder">
+              <v-icon size="28">mdi-store</v-icon>
+            </div>
+          </template>
+        </v-img>
+
+        <div class="negocio-categoria-info">
+          <strong>
+            {{ negocio.nombre || negocio.negocio_nombre }}
+          </strong>
+
+          <span>
+            <v-icon size="14">mdi-map-marker</v-icon>
+            {{ negocio.municipio || negocio.departamento || 'Ubicación no disponible' }}
+          </span>
+
+          <span v-if="Number(negocio.rating) > 0" class="negocio-categoria-rating">
+            <v-icon size="14" color="#f5a623">mdi-star</v-icon>
+            {{ Number(negocio.rating).toFixed(1) }}
+            <small>({{ negocio.resenas || 0 }} reseñas)</small>
+          </span>
+
+          <span class="negocio-categoria-ver">
+            Ver negocio
+            <v-icon size="15">mdi-arrow-right</v-icon>
+          </span>
+        </div>
+      </button>
+    </div>
+
+  </v-card>
+</v-bottom-sheet>
+
+
+<!-- SHEET: RESULTADOS DE NEGOCIOS -->
+<v-bottom-sheet v-model="hojaResultadosNegocios" inset>
+  <v-card class="sheet-card sheet-resultados" rounded="t-xl">
+    <div class="sheet-handle"></div>
+    <div class="sheet-heading">
+      <div>
+        <h3><v-icon color="#079b98" class="mr-2">mdi-store-search</v-icon>Negocios encontrados</h3>
+        <p class="sheet-resultados-subtitulo">Resultados según tus filtros</p>
+      </div>
+      <v-btn icon="mdi-close" variant="text" size="small" @click="hojaResultadosNegocios = false" />
+    </div>
+    <div v-if="cargandoBusquedaNegocios" class="servicios-estado">
+      <v-progress-circular indeterminate color="#079b98" size="30" />
+      <span>Buscando negocios...</span>
+    </div>
+    <div v-else-if="errorBusquedaNegocios" class="servicios-estado">
+      <v-icon color="error">mdi-alert-circle-outline</v-icon>
+      <span>{{ errorBusquedaNegocios }}</span>
+      <v-btn variant="text" color="primary" @click="buscarNegocios">Reintentar</v-btn>
+    </div>
+    <div v-else-if="!resultadosNegocios.length" class="servicios-estado">
+      <v-icon size="34" color="grey">mdi-store-search-outline</v-icon>
+      <strong>No encontramos negocios</strong>
+      <span>Prueba con otro nombre, categoría o ubicación.</span>
+    </div>
+    <div v-else class="resultados-grid">
+      <button v-for="negocio in resultadosNegocios" :key="negocio.id" type="button"
+        class="resultado-negocio" @click="abrirNegocio(negocio)">
+        <v-img :src="getFileUrl(negocio.imagen || negocio.logo || negocio.portada || negocio.imagen_portada)"
+          cover class="resultado-imagen">
+          <template #placeholder><div class="resultado-placeholder"><v-icon>mdi-store</v-icon></div></template>
+        </v-img>
+        <div class="resultado-contenido">
+          <strong>{{ negocio.nombre || negocio.negocio_nombre }}</strong>
+          <span class="resultado-ubicacion"><v-icon size="13">mdi-map-marker</v-icon>
+            {{ negocio.municipio || negocio.departamento || 'Ubicación no disponible' }}</span>
+          <span v-if="Number(negocio.rating) > 0" class="resultado-rating">
+            <v-icon size="14" color="#f5a623">mdi-star</v-icon>
+            {{ Number(negocio.rating).toFixed(1) }} <small>({{ negocio.resenas || 0 }})</small>
+          </span>
+          <span class="resultado-enlace">Ver negocio <v-icon size="14">mdi-arrow-right</v-icon></span>
+        </div>
+      </button>
+    </div>
+  </v-card>
+</v-bottom-sheet>
+
+<!-- SHEET: RESULTADOS DE SERVICIOS -->
+<v-bottom-sheet v-model="hojaResultadosServicios" inset>
+  <v-card class="sheet-card sheet-resultados" rounded="t-xl">
+    <div class="sheet-handle"></div>
+    <div class="sheet-heading">
+      <div>
+        <h3><v-icon color="#079b98" class="mr-2">mdi-content-cut</v-icon>Servicios encontrados</h3>
+        <p class="sheet-resultados-subtitulo">Resultados según tus filtros</p>
+      </div>
+      <v-btn icon="mdi-close" variant="text" size="small" @click="hojaResultadosServicios = false" />
+    </div>
+    <div v-if="cargandoBusquedaServicios" class="servicios-estado">
+      <v-progress-circular indeterminate color="#079b98" size="30" />
+      <span>Buscando servicios...</span>
+    </div>
+    <div v-else-if="errorBusquedaServicios" class="servicios-estado">
+      <v-icon color="error">mdi-alert-circle-outline</v-icon>
+      <span>{{ errorBusquedaServicios }}</span>
+      <v-btn variant="text" color="primary" @click="buscarServicios">Reintentar</v-btn>
+    </div>
+    <div v-else-if="!resultadosServicios.length" class="servicios-estado">
+      <v-icon size="34" color="grey">mdi-content-cut</v-icon>
+      <strong>No encontramos servicios</strong>
+      <span>Prueba con otro nombre, categoría o ubicación.</span>
+    </div>
+    <div v-else class="servicios-grid">
+      <TarjetaServicio v-for="servicio in resultadosServicios"
+        :key="`${servicio.servicio_id || servicio.id}-${servicio.negocio_id}`"
+        :servicio="servicio" @click="abrirServicio(servicio)"
+        @favorito="toggleFavoritoServicio" />
+    </div>
+  </v-card>
+</v-bottom-sheet>
+
+<!-- SHEET: RESULTADOS DE PROFESIONALES -->
+<v-bottom-sheet v-model="hojaResultadosProfesionales" inset>
+  <v-card class="sheet-card sheet-resultados" rounded="t-xl">
+    <div class="sheet-handle"></div>
+    <div class="sheet-heading">
+      <div>
+        <h3><v-icon color="#079b98" class="mr-2">mdi-account-search</v-icon>Profesionales encontrados</h3>
+        <p class="sheet-resultados-subtitulo">Resultados según tus filtros</p>
+      </div>
+      <v-btn icon="mdi-close" variant="text" size="small" @click="hojaResultadosProfesionales = false" />
+    </div>
+    <div v-if="cargandoBusquedaProfesionales" class="servicios-estado">
+      <v-progress-circular indeterminate color="#079b98" size="30" />
+      <span>Buscando profesionales...</span>
+    </div>
+    <div v-else-if="errorBusquedaProfesionales" class="servicios-estado">
+      <v-icon color="error">mdi-alert-circle-outline</v-icon>
+      <span>{{ errorBusquedaProfesionales }}</span>
+      <v-btn variant="text" color="primary" @click="buscarProfesionales">Reintentar</v-btn>
+    </div>
+    <div v-else-if="!resultadosProfesionales.length" class="servicios-estado">
+      <v-icon size="34" color="grey">mdi-account-search-outline</v-icon>
+      <strong>No encontramos profesionales</strong>
+      <span>Prueba con otro nombre, tipo o ubicación.</span>
+    </div>
+    <div v-else class="resultados-grid">
+      <button v-for="profesional in resultadosProfesionales" :key="profesional.id"
+        type="button" class="resultado-negocio" @click="abrirProfesional(profesional)">
+        <v-img :src="getFileUrl(profesional.foto || profesional.imagen || profesional.fotografia)"
+          cover class="resultado-imagen">
+          <template #placeholder><div class="resultado-placeholder"><v-icon>mdi-account</v-icon></div></template>
+        </v-img>
+        <div class="resultado-contenido">
+          <strong>{{ profesional.nombre || profesional.nombre_completo || profesional.profesional_nombre }}</strong>
+          <span class="resultado-ubicacion"><v-icon size="13">mdi-briefcase-outline</v-icon>
+            {{ profesional.tipo_profesional || profesional.profesion || profesional.tipo_nombre || 'Profesional' }}</span>
+          <span class="resultado-ubicacion"><v-icon size="13">mdi-map-marker</v-icon>
+            {{ profesional.municipio || profesional.departamento || 'Ubicación no disponible' }}</span>
+          <span class="resultado-enlace">Ver perfil <v-icon size="14">mdi-arrow-right</v-icon></span>
+        </div>
+      </button>
+    </div>
   </v-card>
 </v-bottom-sheet>
 
@@ -293,12 +468,14 @@
 </template>
 
 <script>
-import {getProfessionals} from "../modules/profesional/services/profesional.api.js";
+
 import {municipiosPorDepartamento} from "@/modules/admin/modules/negocio/data/municipiosBolivia.js";
 import {getBusinessTypes} from "../modules/negocio/services/tipoNegocio.api.js";
 import { getFavoritos, agregarFavorito, eliminarFavorito } from "../../cliente/modules/favoritos/services/favorito.api.js";
 import MapaNegociosSheet from "../components/MapaNegociosSheet.vue";
-import { getNegocios, getServicios, getServiciosConDescuentoPublico } from "../services/piaPublico.api.js";
+import {getProfessionals, getProfessionalsTypes, buscarProfesionalesPublicos} from "../modules/profesional/services/profesional.api.js";
+
+import { getNegocios, getServicios, getServiciosConDescuentoPublico, buscarNegociosPublicos, buscarServiciosPublicos,} from "../services/piaPublico.api.js";
 
 import { getFileUrl } from "@/utils/ayuda";
 
@@ -342,14 +519,29 @@ export default {
         },
       ],
 
-      // Negocios
+      // Negocios de la página principal / mapa
       negociosDestacados: [],
       cargandoNegocios: false,
       errorNegocios: "",
 
+      // Resultados independientes de búsqueda
+      resultadosNegocios: [],
+      resultadosServicios: [],
+      resultadosProfesionales: [],
+      cargandoBusquedaNegocios: false,
+      errorBusquedaNegocios: "",
+      cargandoBusquedaServicios: false,
+      errorBusquedaServicios: "",
+      cargandoBusquedaProfesionales: false,
+      errorBusquedaProfesionales: "",
+      hojaResultadosNegocios: false,
+      hojaResultadosServicios: false,
+      hojaResultadosProfesionales: false,
+
       // Profesionales
       profesionalesDestacados: [],
       cargandoProfesionales: false,
+      errorProfesionales: "",
 
       // Servicios
       serviciosDestacados: [],
@@ -364,6 +556,10 @@ export default {
       // Ubicación
       departamentoSeleccionado: "",
       municipioSeleccionado: "",
+
+      // Valor compatible con el campo municipio de la BD
+      municipioFiltro: "",
+
       busquedaUbicacion: "",
       municipiosPorDepartamento,
 
@@ -372,6 +568,9 @@ export default {
       hojaUbicacion: false,
       hojaFiltros: false,
       hojaCategorias: false,
+
+      // Control de navegación entre filtros y ubicación
+      volverAFiltrosDesdeUbicacion: false,
 
       // Favoritos
       favoritosNegocios: [],
@@ -411,10 +610,16 @@ export default {
         longitud: null,
       },
 
+      errorUbicacion: "",
+      cargandoUbicacion: false,
+
       // Banner rotativo de descuentos públicos
       descuentosBanner: [],
       indiceDescuento: 0,
       temporizadorDescuentos: null,
+
+      tiposProfesionales: [],
+      cargandoTiposProfesionales: false,
     };
   },
 
@@ -427,7 +632,9 @@ export default {
     },
 
     todasCategorias() {
-      return this.tiposNegocio;
+      return this.tipoBusqueda === "profesional"
+        ? this.tiposProfesionales
+        : this.tiposNegocio;
     },
 
     ubicacionesFiltradas() {
@@ -475,6 +682,47 @@ export default {
   methods: {
     getFileUrl,
      
+    async obtenerTiposProfesionales() {
+      this.cargandoTiposProfesionales = true;
+
+      try {
+        const respuesta = await getProfessionalsTypes();
+
+        this.tiposProfesionales = respuesta.data?.data || [];
+      } catch (error) {
+        console.error(
+          "Error al obtener tipos de profesionales:",
+          error
+        );
+
+        this.tiposProfesionales = [];
+      } finally {
+        this.cargandoTiposProfesionales = false;
+      }
+    },
+
+    // =========================================
+    // NAVEGACIÓN DE FILTROS Y UBICACIÓN
+    // =========================================
+    abrirUbicacionDesdeFiltros() {
+      this.volverAFiltrosDesdeUbicacion = true;
+
+      this.hojaFiltros = false;
+      this.hojaUbicacion = true;
+    },
+
+    cerrarUbicacionYVolverAFiltros() {
+      this.hojaUbicacion = false;
+
+      if (this.volverAFiltrosDesdeUbicacion) {
+        this.volverAFiltrosDesdeUbicacion = false;
+
+        this.$nextTick(() => {
+          this.hojaFiltros = true;
+        });
+      }
+    },
+
     async obtenerDescuentosBanner() {
       try {
         const respuesta = await getServiciosConDescuentoPublico();
@@ -556,7 +804,6 @@ export default {
       });
     },
 
-
     async obtenerServicios() {
       this.paginaServicios = 1;
       this.hayMasServicios = true;
@@ -567,17 +814,31 @@ export default {
       this.claveScrollServicios++;
 
       try {
-        await this.obtenerUbicacionCliente();
+        // Recuperar el comportamiento original: solicitar GPS al cargar
+        // el catálogo para poder calcular la distancia desde el primer render.
+        if (
+          this.ubicacionCliente.latitud == null ||
+          this.ubicacionCliente.longitud == null
+        ) {
+          await this.obtenerUbicacionCliente();
+        }
+
+        const tipoNegocioId = this.obtenerTipoNegocioFiltro();
 
         const respuesta = await getServicios({
           pagina: 1,
           limite: this.limiteServicios,
+
           ...(this.departamentoSeleccionado && {
             departamento: this.departamentoSeleccionado,
           }),
-          ...(this.municipioSeleccionado && {
-            municipio: this.municipioSeleccionado,
+
+          ...((this.municipioFiltro || this.municipioSeleccionado) && {
+            municipio: this.municipioFiltro || this.municipioSeleccionado,
           }),
+
+          ...(tipoNegocioId && { tipoNegocioId }),
+
           ...(this.textoBusqueda.trim() && {
             buscar: this.textoBusqueda.trim(),
           }),
@@ -585,25 +846,29 @@ export default {
 
         const body = respuesta?.data || {};
         const lista = body.datos || body.data || body.servicios || [];
-        const servicios = Array.isArray(lista)?lista : [];
-        
-        // Preparar cada servicio y calcular su distancia.
-        const serviciosPreparados = servicios.map((servicio) => {
-          const servicioPreparado = {
+
+        const servicios = Array.isArray(lista) ? lista : [];
+
+        this.serviciosDestacados = servicios.map((servicio) => {
+          const preparado = {
             ...servicio,
+            id: servicio.servicio_id ?? servicio.id,
+            nombre: servicio.servicio_nombre ?? servicio.nombre ?? "",
+            descripcion:
+              servicio.servicio_descripcion ?? servicio.descripcion ?? "",
             favorito: this.favoritosServicios.includes(
-              Number(servicio.servicio_id ?? servicio.id),
+              Number(servicio.servicio_id ?? servicio.id)
             ),
-            id: servicio.servicio_id?? servicio.id,
-            nombre: servicio.servicio_nombre?? servicio.nombre?? "",
-            descripcion: servicio.servicio_descripcion?? servicio.descripcion?? "",
-            imagen: servicio.imagen ||
+            imagen:
+              servicio.imagen ||
               servicio.profesional_foto ||
               servicio.negocio_logo ||
               "",
             negocio: servicio.negocio_nombre || "",
             profesional: servicio.profesional_nombre || "",
-            precio: Number(servicio.precio) || 0,
+            precio: Number(
+              servicio.precio_final ?? servicio.precio
+            ) || 0,
             rating: Number(servicio.rating) || 0,
             resenas: Number(servicio.resenas) || 0,
             ubicacion: [
@@ -612,18 +877,16 @@ export default {
             ].filter(Boolean).join(", "),
           };
 
-          return this.agregarDistanciaServicio(servicioPreparado);
+          return this.agregarDistanciaServicio(preparado);
         });
 
-        // Asignar la lista completa después de procesar todos los servicios.
-        this.serviciosDestacados = serviciosPreparados;        
-        this.paginaServicios = 1;
-        
         const paginacion = body.paginacion;
 
-        this.hayMasServicios = paginacion ?
-          paginacion.pagina < paginacion.totalPaginas :
-          servicios.length === this.limiteServicios;
+        this.paginaServicios = 1;
+
+        this.hayMasServicios = paginacion
+          ? paginacion.pagina < paginacion.totalPaginas
+          : servicios.length === this.limiteServicios;
 
       } catch (error) {
         console.error("Error al cargar servicios públicos:", error);
@@ -631,7 +894,7 @@ export default {
         this.errorServicios =
           error.response?.data?.mensaje ||
           error.response?.data?.message ||
-          "No pudimos cargar los servicios. Inténtalo nuevamente.";
+          "No pudimos cargar los servicios.";
       } finally {
         this.cargandoServicios = false;
       }
@@ -651,8 +914,10 @@ export default {
 
       try {
         const siguientePagina = this.paginaServicios + 1;
+        
+        const tipoNegocioId = this.obtenerTipoNegocioFiltro();
 
-        const respuesta = await getServicios({
+        const respuesta = await buscarServiciosPublicos({
           pagina: siguientePagina,
           limite: this.limiteServicios,
 
@@ -660,9 +925,11 @@ export default {
             departamento: this.departamentoSeleccionado,
           }),
 
-          ...(this.municipioSeleccionado && {
-            municipio: this.municipioSeleccionado,
+          ...((this.municipioFiltro || this.municipioSeleccionado) && {
+            municipio: this.municipioFiltro || this.municipioSeleccionado,
           }),
+
+          ...(tipoNegocioId && { tipoNegocioId }),
 
           ...(this.textoBusqueda.trim() && {
             buscar: this.textoBusqueda.trim(),
@@ -782,6 +1049,19 @@ export default {
       }
     },
 
+    obtenerTipoNegocioFiltro() {
+      const categoria = this.categoriaSeleccionada;
+
+      const id = Number(
+        categoria?.tipo_negocio_id ??
+        categoria?.id ??
+        categoria ??
+        0
+      );
+
+      return Number.isInteger(id) && id > 0 ? id : null;
+    },
+
 
     async obtenerUbicacionCliente() {
       if (!navigator.geolocation) {
@@ -876,6 +1156,23 @@ export default {
       };
     },
 
+    actualizarDistanciasServicios() {
+      if (
+        this.ubicacionCliente?.latitud == null ||
+        this.ubicacionCliente?.longitud == null
+      ) return;
+
+      this.serviciosDestacados = this.serviciosDestacados.map((servicio) => {
+        const actualizado = this.agregarDistanciaServicio(servicio);
+        if (actualizado === servicio) {
+          const copia = { ...servicio };
+          delete copia.distancia_km;
+          return copia;
+        }
+        return actualizado;
+      });
+    },
+
     // =========================================
     // TIPOS DE NEGOCIO
     // =========================================
@@ -912,6 +1209,8 @@ export default {
       this.errorNegocios = "";
 
       try {
+        const tipoNegocioId = this.obtenerTipoNegocioFiltro();
+
         const respuesta = await getNegocios({
           pagina: 1,
           limite: 12,
@@ -920,9 +1219,11 @@ export default {
             departamento: this.departamentoSeleccionado,
           }),
 
-          ...(this.municipioSeleccionado && {
-            municipio: this.municipioSeleccionado,
+          ...((this.municipioFiltro || this.municipioSeleccionado) && {
+            municipio: this.municipioFiltro || this.municipioSeleccionado,
           }),
+
+          ...(tipoNegocioId && { tipoNegocioId }),
 
           ...(this.textoBusqueda.trim() && {
             buscar: this.textoBusqueda.trim(),
@@ -930,38 +1231,41 @@ export default {
         });
 
         const body = respuesta?.data || {};
+
         const lista =
           body.datos || body.data || body.negocios || [];
 
-        this.negociosDestacados = Array.isArray(lista) ?
-          lista.map((negocio) => ({
-            ...negocio,
-            imagen: negocio.imagen ||
-              negocio.logo ||
-              negocio.portada ||
-              negocio.imagen_portada ||
-              "",
-            ubicacion: negocio.ubicacion || [
+        this.negociosDestacados = Array.isArray(lista)
+          ? lista.map((negocio) => ({
+              ...negocio,
+              imagen:
+                negocio.imagen ||
+                negocio.logo ||
+                negocio.portada ||
+                negocio.imagen_portada ||
+                "",
+              ubicacion: [
                 negocio.municipio,
                 negocio.departamento,
-              ]
-              .filter(Boolean)
-              .join(", "),
-            favorito: this.favoritosNegocios.includes(
-              Number(negocio.id),
-            ),
-          })) : [];
+              ].filter(Boolean).join(", "),
+              favorito: this.favoritosNegocios.includes(
+                Number(negocio.id)
+              ),
+            }))
+          : [];
+
       } catch (error) {
         console.error("Error al cargar negocios públicos:", error);
 
         this.errorNegocios =
           error.response?.data?.mensaje ||
           error.response?.data?.message ||
-          "No pudimos cargar los negocios. Revisa el servidor e inténtalo nuevamente.";
+          "No pudimos cargar los negocios.";
       } finally {
         this.cargandoNegocios = false;
       }
     },
+
 
     // =========================================
     // PROFESIONALES
@@ -995,6 +1299,146 @@ export default {
         this.profesionalesDestacados = [];
       } finally {
         this.cargandoProfesionales = false;
+      }
+    },
+
+    // =========================================
+    // BÚSQUEDAS PÚBLICAS POR TIPO
+    // =========================================
+    construirFiltrosBusqueda() {
+      const filtros = {
+        pagina: 1,
+        limite: 12,
+        ...(this.departamentoSeleccionado && {
+          departamento: this.departamentoSeleccionado,
+        }),
+        ...((this.municipioFiltro || this.municipioSeleccionado) && {
+          municipio: this.municipioFiltro || this.municipioSeleccionado,
+        }),
+        ...(this.textoBusqueda.trim() && {
+          buscar: this.textoBusqueda.trim(),
+        }),
+      };
+
+      return filtros;
+    },
+
+    async buscarNegocios() {
+      this.cargandoBusquedaNegocios = true;
+      this.errorBusquedaNegocios = "";
+      this.resultadosNegocios = [];
+
+      try {
+        const tipoNegocioId = this.obtenerTipoNegocioFiltro();
+        const respuesta = await buscarNegociosPublicos({
+          ...this.construirFiltrosBusqueda(),
+          ...(tipoNegocioId && { tipoNegocioId }),
+        });
+
+        const body = respuesta?.data || {};
+        const lista = body.datos || body.data || body.negocios || [];
+
+        this.resultadosNegocios = Array.isArray(lista)
+          ? lista.map((negocio) => ({
+              ...negocio,
+              imagen: negocio.imagen || negocio.logo || negocio.portada || negocio.imagen_portada || "",
+              ubicacion: [negocio.municipio, negocio.departamento].filter(Boolean).join(", "),
+              favorito: this.favoritosNegocios.includes(Number(negocio.id)),
+            }))
+          : [];
+      } catch (error) {
+        console.error("Error en búsqueda pública de negocios:", error);
+        this.errorBusquedaNegocios =
+          error.response?.data?.mensaje ||
+          error.response?.data?.message ||
+          "No pudimos buscar negocios.";
+      } finally {
+        this.cargandoBusquedaNegocios = false;
+      }
+    },
+
+    async buscarServicios() {
+      this.paginaServicios = 1;
+      this.hayMasServicios = true;
+      this.cargandoBusquedaServicios = true;
+      this.errorBusquedaServicios = "";
+      this.resultadosServicios = [];
+
+      try {
+        const tipoNegocioId = this.obtenerTipoNegocioFiltro();
+        const respuesta = await buscarServiciosPublicos({
+          ...this.construirFiltrosBusqueda(),
+          ...(tipoNegocioId && { tipoNegocioId }),
+        });
+
+        const body = respuesta?.data || {};
+        const lista = body.datos || body.data || body.servicios || [];
+        const servicios = Array.isArray(lista) ? lista : [];
+
+        this.resultadosServicios = servicios.map((servicio) => {
+          const id = Number(servicio.servicio_id ?? servicio.id);
+          const preparado = {
+            ...servicio,
+            id,
+            nombre: servicio.servicio_nombre ?? servicio.nombre ?? "",
+            descripcion: servicio.servicio_descripcion ?? servicio.descripcion ?? "",
+            favorito: this.favoritosServicios.includes(id),
+            imagen: servicio.imagen || servicio.profesional_foto || servicio.negocio_logo || "",
+            negocio: servicio.negocio_nombre || "",
+            profesional: servicio.profesional_nombre || "",
+            precio: Number(servicio.precio_final ?? servicio.precio) || 0,
+            rating: Number(servicio.rating) || 0,
+            resenas: Number(servicio.resenas) || 0,
+            ubicacion: [servicio.municipio, servicio.departamento].filter(Boolean).join(", "),
+          };
+          return this.agregarDistanciaServicio(preparado);
+        });
+
+        const paginacion = body.paginacion;
+        this.paginaServicios = 1;
+        this.hayMasServicios = paginacion
+          ? paginacion.pagina < paginacion.totalPaginas
+          : servicios.length === this.limiteServicios;
+      } catch (error) {
+        console.error("Error en búsqueda pública de servicios:", error);
+        this.errorBusquedaServicios =
+          error.response?.data?.mensaje ||
+          error.response?.data?.message ||
+          "No pudimos buscar servicios.";
+      } finally {
+        this.cargandoBusquedaServicios = false;
+      }
+    },
+
+    async buscarProfesionales() {
+      this.cargandoBusquedaProfesionales = true;
+      this.errorBusquedaProfesionales = "";
+      this.resultadosProfesionales = [];
+
+      try {
+        const tipoProfesionalId = Number(this.categoriaSeleccionada?.id) || null;
+        const respuesta = await buscarProfesionalesPublicos({
+          ...this.construirFiltrosBusqueda(),
+          ...(tipoProfesionalId && { tipoProfesionalId }),
+        });
+
+        const body = respuesta?.data || {};
+        const lista = body.data || body.datos || body.profesionales || [];
+
+        this.resultadosProfesionales = Array.isArray(lista)
+          ? lista.map((profesional) => ({
+              ...profesional,
+              favorito: this.favoritosProfesionales.includes(Number(profesional.id)),
+            }))
+          : [];
+      } catch (error) {
+        console.error("Error en búsqueda pública de profesionales:", error);
+        this.errorBusquedaProfesionales =
+          error.response?.data?.mensaje ||
+          error.response?.data?.message ||
+          "No pudimos buscar profesionales.";
+      } finally {
+        this.cargandoBusquedaProfesionales = false;
       }
     },
 
@@ -1239,22 +1683,16 @@ export default {
     // BÚSQUEDA Y FILTROS
     // =========================================
     buscar() {
-      this.hojaFiltros = false;
-      
-      // if (this.tipoBusqueda === "negocio") {
-      //   this.obtenerNegocios();
-      //   return;
-      // }
+      const palabras = String(this.textoBusqueda || "").trim();
 
-      // if (this.tipoBusqueda === "profesional") {
-      //   this.obtenerProfesionales();
-      //   return;
-      // }
+      if (!palabras) {
+        return;
+      }
 
-      const palabras = this.textoBusqueda.trim();
-      console.log('palabras: ', palabras)
-      if (!palabras) return;
-
+      // La búsqueda general conserva el flujo original:
+      // navega a BusquedaServiciosPage, donde se muestran los
+      // resultados completos de servicios en su propia página.
+      // Los sheets quedan reservados exclusivamente para aplicar filtros.
       this.$router.push({
         name: "publico-busqueda",
         params: {
@@ -1262,246 +1700,349 @@ export default {
         },
       });
     },
-
-
-    aplicarFiltros() {
-      this.hojaFiltros = false;
-      this.hojaCategorias = false;
-
-      if (this.tipoBusqueda === "negocio") {
-        this.obtenerNegocios();
-      } else if (this.tipoBusqueda === "profesional") {
-        this.obtenerProfesionales();
-      } else {
-        this.avisarServiciosPendientes();
+    
+    cambiarTipoBusqueda(tipo) {
+      if (!["negocio", "servicio", "profesional"].includes(tipo)) return;
+      if (this.tipoBusqueda !== tipo) {
+        this.tipoBusqueda = tipo;
+        this.categoriaSeleccionada = null;
       }
     },
 
-    limpiarFiltros() {
-      this.textoBusqueda = "";
-      this.tipoBusqueda = "negocio";
-      this.categoriaSeleccionada = null;
-      this.departamentoSeleccionado = "";
-      this.municipioSeleccionado = "";
+    async aplicarFiltros() {
       this.hojaFiltros = false;
       this.hojaCategorias = false;
 
-      this.obtenerNegocios();
+      this.hojaResultadosNegocios = false;
+      this.hojaResultadosServicios = false;
+      this.hojaResultadosProfesionales = false;
+
+      if (this.tipoBusqueda === "negocio") {
+        await this.buscarNegocios();
+        this.hojaResultadosNegocios = true;
+        return;
+      }
+
+      if (this.tipoBusqueda === "servicio") {
+        await this.buscarServicios();
+        this.hojaResultadosServicios = true;
+        return;
+      }
+
+      if (this.tipoBusqueda === "profesional") {
+        await this.buscarProfesionales();
+        this.hojaResultadosProfesionales = true;
+        return;
+      }
+    },
+
+    async limpiarFiltros() {
+      this.textoBusqueda = "";
+      this.tipoBusqueda = "negocio";
+      this.categoriaSeleccionada = null;
+
+      this.departamentoSeleccionado = "";
+      this.municipioSeleccionado = "";
+      this.municipioFiltro = "";
+
+      this.hojaFiltros = false;
+      this.hojaCategorias = false;
+      this.hojaUbicacion = false;
+
+      this.errorNegocios = "";
+      this.errorServicios = "";
+
+      await this.obtenerNegocios();
     },
 
     // =========================================
     // UBICACIÓN
     // =========================================
-    seleccionarUbicacion(lugar) {
+    async seleccionarUbicacion(lugar) {
       this.departamentoSeleccionado = lugar.departamento;
       this.municipioSeleccionado = lugar.municipio;
-      this.hojaUbicacion = false;
 
-      if (this.tipoBusqueda === "negocio") {
-        this.obtenerNegocios();
+      // Mantener compatibilidad con municipio de BD.
+      const normalizar = (texto) =>
+        String(texto || "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .trim();
+
+      // En los registros actuales de PIA:
+      // Municipio del catálogo: Cochabamba
+      // Municipio en BD: Cercado
+      if (
+        normalizar(lugar.departamento) === "cochabamba" &&
+        normalizar(lugar.municipio) === "cochabamba"
+      ) {
+        this.municipioFiltro = "Cercado";
+      } else {
+        this.municipioFiltro = lugar.municipio;
       }
-    },
 
-    async detectarUbicacion() {
-      if (!navigator.geolocation) {
-        this.errorNegocios =
-          "Tu navegador no admite geolocalización. Elige tu ciudad manualmente.";
+      console.log("UBICACIÓN SELECCIONADA:", {
+        departamento: this.departamentoSeleccionado,
+        municipioCatalogo: this.municipioSeleccionado,
+        municipioFiltroBD: this.municipioFiltro,
+      });
+
+      // Si venimos de los filtros, regresar a ellos.
+      // NO ejecutar la búsqueda todavía.
+      if (this.volverAFiltrosDesdeUbicacion) {
+        this.cerrarUbicacionYVolverAFiltros();
         return;
       }
 
-      this.cargandoNegocios = true;
-      this.errorNegocios = "";
+      // Si la ubicación se seleccionó fuera de los filtros,
+      // conservar el comportamiento de búsqueda inmediata.
+      await Promise.all([
+        this.obtenerNegocios(),
+        this.obtenerServicios(),
+      ]);
 
-      navigator.geolocation.getCurrentPosition(
-        async (posicion) => {
-            try {
-              const {
-                latitude,
-                longitude
-              } = posicion.coords;
+      this.hojaUbicacion = false;
+    },
+    
+    async detectarUbicacion() {
+      if (this.cargandoUbicacion) return;
 
-              const respuesta = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1&accept-language=es`,
-              );
+      this.errorUbicacion = "";
 
-              if (!respuesta.ok) {
-                throw new Error(
-                  "No se pudo identificar tu ciudad.",
-                );
-              }
+      if (!navigator.geolocation) {
+        this.errorUbicacion = "Tu navegador no admite geolocalización.";
+        return;
+      }
 
-              const resultado = await respuesta.json();
-              const direccion = resultado.address || {};
+      this.cargandoUbicacion = true;
 
-              const departamento =
-                direccion.state ||
-                direccion.province ||
-                direccion.region ||
-                "";
-
-              const municipio =
-                direccion.city ||
-                direccion.town ||
-                direccion.municipality ||
-                direccion.county ||
-                direccion.village ||
-                "";
-
-              if (!departamento || !municipio) {
-                throw new Error(
-                  "No pudimos identificar tu municipio. Selecciónalo manualmente.",
-                );
-              }
-
-              const normalizar = (texto) =>
-                texto
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .toLocaleLowerCase("es")
-                .trim();
-
-              const departamentoCatalogo = Object.keys(
-                this.municipiosPorDepartamento,
-              ).find(
-                (nombre) =>
-                normalizar(nombre) === normalizar(departamento),
-              );
-
-              if (!departamentoCatalogo) {
-                throw new Error(
-                  "No encontramos el departamento en el catálogo de Bolivia.",
-                );
-              }
-
-              const municipioCatalogo =
-                this.municipiosPorDepartamento[
-                  departamentoCatalogo
-                ].find(
-                  (nombre) =>
-                  normalizar(nombre) === normalizar(municipio),
-                );
-
-              if (!municipioCatalogo) {
-                throw new Error(
-                  "No encontramos el municipio en el catálogo. Selecciónalo manualmente.",
-                );
-              }
-
-              this.departamentoSeleccionado =
-                departamentoCatalogo;
-              this.municipioSeleccionado = municipioCatalogo;
-              this.hojaUbicacion = false;
-
-              if (this.tipoBusqueda === "negocio") {
-                await this.obtenerNegocios();
-              }
-            } catch (error) {
-              console.error(
-                "Error al identificar ubicación:",
-                error,
-              );
-
-              this.errorNegocios =
-                error.message ||
-                "No pudimos detectar tu ciudad. Selecciónala manualmente.";
-            } finally {
-              this.cargandoNegocios = false;
+      try {
+        // Obtener coordenadas GPS del cliente.
+        const posicion = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            resolve,
+            reject,
+            {
+              enableHighAccuracy: true,
+              timeout: 20000,
+              maximumAge: 300000,
             }
-          },
+          );
+        });
 
-          (error) => {
-            this.cargandoNegocios = false;
+        const latitude = posicion.coords.latitude;
+        const longitude = posicion.coords.longitude;
 
-            const mensajes = {
-              1: "Debes permitir el acceso a tu ubicación en el navegador.",
-              2: "No fue posible determinar tu ubicación. Inténtalo nuevamente.",
-              3: "La solicitud de ubicación tardó demasiado. Inténtalo nuevamente.",
-            };
+        this.ubicacionCliente = {
+          latitud: latitude,
+          longitud: longitude,
+        };
 
-            this.errorNegocios =
-              mensajes[error.code] ||
-              "No pudimos obtener tu ubicación. Selecciona tu ciudad manualmente.";
+        // Recalcular inmediatamente los servicios que ya están visibles.
+        this.actualizarDistanciasServicios();
 
-            console.warn("Geolocalización:", error.message);
-          },
+        console.log("UBICACIÓN GPS:", this.ubicacionCliente);
 
-          {
-            enableHighAccuracy: false,
-            timeout: 15000,
-            maximumAge: 300000,
-          },
-      );
+        // Obtener dirección para conservar los filtros geográficos existentes.
+        const respuesta = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1&accept-language=es`
+        );
+
+        if (!respuesta.ok) {
+          throw new Error("No se pudo identificar tu ubicación.");
+        }
+
+        const resultado = await respuesta.json();
+        const direccion = resultado.address || {};
+
+        const normalizar = (texto) =>
+          String(texto || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase()
+            .trim();
+
+        const departamento =
+          direccion.state ||
+          direccion.province ||
+          direccion.region ||
+          "";
+
+        const departamentoCatalogo = Object.keys(
+          this.municipiosPorDepartamento
+        ).find(
+          (nombre) =>
+            normalizar(nombre) === normalizar(departamento)
+        );
+
+        if (!departamentoCatalogo) {
+          throw new Error(
+            `No encontramos el departamento "${departamento}" en nuestro catálogo.`
+          );
+        }
+
+        const posiblesMunicipios = [
+          direccion.city,
+          direccion.town,
+          direccion.municipality,
+          direccion.village,
+          direccion.city_district,
+        ].filter(Boolean);
+
+        const municipiosDepartamento =
+          this.municipiosPorDepartamento[departamentoCatalogo] || [];
+
+        const municipioCatalogo = posiblesMunicipios
+          .map((nombre) =>
+            municipiosDepartamento.find(
+              (municipio) =>
+                normalizar(municipio) === normalizar(nombre)
+            )
+          )
+          .find(Boolean);
+
+        if (!municipioCatalogo) {
+          throw new Error(
+            `No encontramos un municipio válido para "${departamentoCatalogo}" en nuestro catálogo.`
+          );
+        }
+
+        const municipioBaseDatos =
+          direccion.county || municipioCatalogo;
+
+        this.departamentoSeleccionado = departamentoCatalogo;
+        this.municipioSeleccionado = municipioCatalogo;
+        this.municipioFiltro = municipioBaseDatos;
+
+        // Si venimos desde filtros, regresar a ellos sin ejecutar búsqueda todavía.
+        if (this.volverAFiltrosDesdeUbicacion) {
+          this.cerrarUbicacionYVolverAFiltros();
+          return;
+        }
+
+        await Promise.all([
+          this.obtenerNegocios(),
+          this.obtenerServicios(),
+        ]);
+
+        this.actualizarDistanciasServicios();
+        this.hojaUbicacion = false;
+
+      } catch (error) {
+        console.error("ERROR DETECTANDO UBICACIÓN:", error);
+
+        const mensajes = {
+          1: "Debes permitir el acceso a tu ubicación en el navegador.",
+          2: "No fue posible determinar tu ubicación.",
+          3: "La solicitud GPS tardó demasiado. Inténtalo nuevamente.",
+        };
+
+        this.errorUbicacion =
+          mensajes[error.code] ||
+          error.message ||
+          "No pudimos detectar tu ubicación.";
+
+      } finally {
+        this.cargandoUbicacion = false;
+      }
     },
 
-    // =========================================
-    // CATEGORÍAS Y NEGOCIOS POR CATEGORÍA
-    // =========================================
     async seleccionarCategoria(categoria) {
-      this.categoriaActiva = categoria;
-      this.categoriaSeleccionada = categoria;
+      const id = Number(
+        this.tipoBusqueda === "profesional"
+          ? categoria?.id
+          : categoria?.tipo_negocio_id ?? categoria?.id
+      );
+
+      if (!Number.isInteger(id) || id <= 0) {
+        console.error("El tipo/categoría no tiene un ID válido:", categoria);
+        return;
+      }
+
+      this.categoriaSeleccionada = {
+        ...categoria,
+        id,
+      };
+
+      // La selección vuelve a los filtros; la búsqueda se ejecuta
+      // únicamente al presionar "Aplicar filtros".
       this.hojaCategorias = false;
-      this.hojaFiltros = false;
-
-      this.negociosCategoria = [];
-      this.errorNegociosCategoria = "";
-      this.hojaNegociosCategoria = true;
-
-      await this.obtenerNegociosPorCategoria(categoria);
+      this.$nextTick(() => {
+        this.hojaFiltros = true;
+      });
     },
-
+    
     async obtenerNegociosPorCategoria(categoria) {
-      if (!categoria?.id) return;
+      const tipoNegocioId = Number(
+        categoria?.id ?? categoria?.tipo_negocio_id
+      );
+
+      if (!Number.isInteger(tipoNegocioId) || tipoNegocioId <= 0) {
+        this.errorNegociosCategoria =
+          "El identificador de categoría no es válido.";
+        return;
+      }
 
       this.cargandoNegociosCategoria = true;
       this.errorNegociosCategoria = "";
+      this.negociosCategoria = [];
 
       try {
         const respuesta = await getNegocios({
           pagina: 1,
           limite: 50,
-          tipoNegocioId: categoria.id,
+          tipoNegocioId,
 
           ...(this.departamentoSeleccionado && {
             departamento: this.departamentoSeleccionado,
           }),
 
-          ...(this.municipioSeleccionado && {
-            municipio: this.municipioSeleccionado,
+          ...((this.municipioFiltro || this.municipioSeleccionado) && {
+            municipio: this.municipioFiltro || this.municipioSeleccionado,
           }),
         });
 
         const body = respuesta?.data || {};
-        const lista =
-          body.datos || body.data || body.negocios || [];
 
-        this.negociosCategoria = Array.isArray(lista) ?
-          lista.map((negocio) => ({
-            ...negocio,
-            imagen: negocio.imagen ||
-              negocio.logo ||
-              negocio.portada ||
-              negocio.imagen_portada ||
-              "",
-            ubicacion: negocio.ubicacion || [
-                negocio.municipio,
-                negocio.departamento,
-              ]
-              .filter(Boolean)
-              .join(", "),
-            favorito: this.favoritosNegocios.includes(
-              Number(negocio.id),
-            ),
-          })) : [];
+        const lista =
+          body.datos ||
+          body.data ||
+          body.negocios ||
+          [];
+
+        this.negociosCategoria = Array.isArray(lista)
+          ? lista.map((negocio) => ({
+              ...negocio,
+              imagen:
+                negocio.imagen ||
+                negocio.logo ||
+                negocio.portada ||
+                negocio.imagen_portada ||
+                "",
+              ubicacion:
+                negocio.ubicacion ||
+                [
+                  negocio.municipio,
+                  negocio.departamento,
+                ].filter(Boolean).join(", "),
+              favorito: this.favoritosNegocios.includes(
+                Number(negocio.id)
+              ),
+            }))
+          : [];
+
       } catch (error) {
         console.error(
           "Error al cargar negocios por categoría:",
-          error,
+          error
         );
 
         this.errorNegociosCategoria =
           error.response?.data?.mensaje ||
           error.response?.data?.message ||
           "No pudimos cargar los negocios de esta categoría.";
+
       } finally {
         this.cargandoNegociosCategoria = false;
       }
@@ -1512,12 +2053,9 @@ export default {
     // =========================================
     abrirNegocio(negocio) {
       if (negocio.slug) {
-        this.$router.push({ path: `/negocio/${negocio.slug}` }).catch(() => {});
+        this.$router.push(`/perfil/negocio/${negocio.slug}`).catch(() => {});
       } else {
-        console.info(
-          "Falta definir la ruta pública del negocio:",
-          negocio,
-        );
+        console.info("Falta definir la ruta pública del negocio:", negocio);
       }
     },
 
@@ -1704,6 +2242,7 @@ export default {
     this.obtenerNegocios();
     this.obtenerProfesionales();
     this.obtenerTiposNegocio();
+    this.obtenerTiposProfesionales();
     this.obtenerServicios();
     this.obtenerDescuentosBanner();
   },
@@ -2712,6 +3251,106 @@ export default {
   align-items: start;
 }
 
+.sheet-resultados {
+  max-height: 85vh;
+  overflow-y: auto;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+}
+
+.sheet-resultados-subtitulo {
+  margin: 3px 0 0;
+  color: #718096;
+  font-size: 11px;
+}
+
+.resultados-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: stretch;
+}
+
+.resultado-negocio {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid #e8eef1;
+  border-radius: 15px;
+  background: #fff;
+  color: #102653;
+  text-align: left;
+  box-shadow: 0 3px 12px rgba(27, 55, 78, 0.06);
+}
+
+.resultado-imagen {
+  width: 100%;
+  height: 112px;
+  background: #e8f6f4;
+}
+
+.resultado-placeholder {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  color: #079b98;
+}
+
+.resultado-contenido {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.resultado-contenido strong {
+  display: -webkit-box;
+  width: 100%;
+  overflow: hidden;
+  color: #102653;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.resultado-ubicacion,
+.resultado-rating,
+.resultado-enlace {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #718096;
+  font-size: 10px;
+}
+
+.resultado-rating {
+  color: #102653;
+  font-weight: 700;
+}
+
+.resultado-rating small {
+  color: #8592a5;
+  font-weight: 400;
+}
+
+.resultado-enlace {
+  justify-content: flex-end;
+  width: 100%;
+  margin-top: auto;
+  padding-top: 4px;
+  color: #079b98;
+  font-size: 10px;
+  font-weight: 800;
+}
+
 .servicios-grid>* {
   min-width: 0;
   width: 100%;
@@ -2994,4 +3633,89 @@ export default {
   }
 }
 
+.sheet-categoria-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0 18px;
+}
+
+.negocio-categoria-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #e9eff2;
+  border-radius: 15px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.negocio-categoria-item:active {
+  background: #f0faf8;
+}
+
+.negocio-categoria-imagen {
+  width: 78px;
+  height: 78px;
+  flex: 0 0 78px;
+  border-radius: 12px;
+  background: #e8f6f4;
+}
+
+.negocio-categoria-placeholder {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  color: #079b98;
+}
+
+.negocio-categoria-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 5px;
+}
+
+.negocio-categoria-info strong {
+  color: #102653;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.negocio-categoria-info > span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #718096;
+  font-size: 11px;
+}
+
+.negocio-categoria-rating {
+  color: #102653 !important;
+  font-weight: 700;
+}
+
+.negocio-categoria-rating small {
+  color: #8592a5;
+  font-weight: 400;
+}
+
+.negocio-categoria-info .negocio-categoria-ver {
+  justify-content: flex-end;
+  color: #079b98;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+
+.use-location:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
 </style>
