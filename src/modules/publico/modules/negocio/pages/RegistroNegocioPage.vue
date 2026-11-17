@@ -10,7 +10,7 @@
 
     <v-toolbar-title class="text-center">
       <div class="registro-title">
-        Registro de negocio en PIA
+        Registro tu negocio en PIA
       </div>
 
       <div class="registro-subtitle">
@@ -94,89 +94,111 @@
 
         </div>
 
-        <v-form ref="formNegocio" class="mt-6" @submit.prevent>
+        <v-form ref="formNegocio" class="form-registro-minimal form-negocio mt-5" @submit.prevent>
 
-          <!-- TIPO DE NEGOCIO -->                    
-          <v-select v-model="form.negocio.tipo_negocio_id" label="(*) Tipo de negocio" placeholder="Selecciona el tipo de negocio" :items="tiposNegocio"
-            item-title="nombre"
-            item-value="id"
-            variant="outlined"
+          <!-- TIPO DE NEGOCIO: selector mediante panel inferior -->
+          <v-text-field
+            :model-value="tipoNegocioSeleccionado?.nombre || ''"
+            label="(*) Tipo de negocio"
+            placeholder="Toca para seleccionar"
+            prepend-inner-icon="mdi-store-outline"
+            append-inner-icon="mdi-chevron-down"
+            variant="underlined"
             density="comfortable"
+            readonly
             :rules="[reglas.requerido]"
-          >
-            <!-- Opciones desplegadas -->            
-            <template #item="{ props, item }">
-              <v-list-item v-bind="props" :title="undefined" density="comfortable" min-height="52">
-                <template #prepend>
-                  <v-avatar color="primary" variant="tonal" size="34">
-                    <v-icon size="20">
-                      {{ item.icono || 'mdi-store-outline' }}
-                    </v-icon>
-                  </v-avatar>
-                </template>
-
-                <div class="tipo-negocio-nombre">
-                  {{ item.nombre }}
-                </div>
-              </v-list-item>
-            </template>
-
-
-            <!-- Tipo seleccionado -->            
-            <template #selection="{ item }">
-              <div class="tipo-negocio-seleccion">
-                <v-icon size="20" color="primary">
-                  {{ item.icono || 'mdi-store-outline' }}
-                </v-icon>
-
-                <span>{{ item.nombre }}</span>
-              </div>
-            </template>
-
-          </v-select>
-
+            @click="abrirSelectorTipoNegocio"
+            @click:append-inner="abrirSelectorTipoNegocio"
+          />
 
           <div class="agregar-tipo">
-
-            <span>
-              ¿No encuentras el tuyo?
-            </span>
-
-            <v-btn variant="text" color="primary" size="small" prepend-icon="mdi-plus" @click="abrirDialogoTipoNegocio">
+            <span>¿No encuentras el tuyo?</span>
+            <v-btn
+              variant="text"
+              color="primary"
+              size="small"
+              prepend-icon="mdi-plus"
+              @click="abrirDialogoTipoNegocio"
+            >
               Agregar nuevo tipo
             </v-btn>
-
           </div>
 
-          <!-- NOMBRE -->
+          <!-- DATOS PRINCIPALES -->
+          <v-text-field
+            v-model="form.negocio.nombre"
+            label="(*) Nombre comercial"
+            placeholder="Ej. Luna Studio"
+            prepend-inner-icon="mdi-store"
+            variant="underlined"
+            density="comfortable"
+            maxlength="150"
+            :rules="[reglas.nombre]"
+          />
 
-          <v-text-field v-model="form.negocio.nombre" label="(*) Nombre comercial" placeholder="Ej. Salón de Belleza PIA" variant="outlined" density="comfortable" maxlength="150" counter="150" :rules="[reglas.nombre]" />
+          <v-text-field
+            v-model="form.negocio.telefono"
+            label="(*) Teléfono del negocio"
+            placeholder="Ej. 70777777"
+            prepend-inner-icon="mdi-phone-outline"
+            variant="underlined"
+            density="comfortable"
+            maxlength="15"
+            :rules="[reglas.telefono]"
+          />
 
-          <!-- TELÉFONO -->
-
-          <v-text-field v-model="form.negocio.telefono" label="(*) Teléfono del negocio" placeholder="Ej. 71234567" variant="outlined" density="comfortable" maxlength="15" :rules="[reglas.telefono]" />
-
-          <!-- DEPARTAMENTO / MUNICIPIO -->
+          <!-- UBICACIÓN -->
+          <div class="form-subtitulo">Ubicación del negocio</div>
 
           <v-row>
+            <v-col cols="12" sm="6">
+              <v-select
+                v-model="form.negocio.departamento"
+                label="(*) Departamento"
+                placeholder="Selecciona"
+                :items="departamentos"
+                prepend-inner-icon="mdi-map-marker-outline"
+                variant="underlined"
+                density="comfortable"
+                :rules="[reglas.requerido]"
+              />
+            </v-col>
 
             <v-col cols="12" sm="6">
-              <v-select v-model="form.negocio.departamento" label="(*) Departamento" placeholder="Selecciona" :items="departamentos" variant="outlined" density="comfortable" :rules="[reglas.requerido]" />
+              <v-text-field
+                v-model="form.negocio.municipio"
+                label="(*) Municipio/Localidad"
+                placeholder="Ej. Cercado"
+                prepend-inner-icon="mdi-map-marker"
+                variant="underlined"
+                density="comfortable"
+                maxlength="150"
+                :rules="[reglas.nombre]"
+              />
             </v-col>
-
-            <v-col cols="12" sm="6">              
-              <v-text-field v-model="form.negocio.municipio" label="(*) Municipio/Localidad" placeholder="Selecciona" variant="outlined" density="comfortable" maxlength="150" counter="150" :rules="[reglas.nombre]" />
-            </v-col>
-
           </v-row>
 
-          <!-- ZONA -->
+          <v-text-field
+            v-model="form.negocio.zona"
+            label="(*) Zona/Barrio"
+            placeholder="Ej. Centro"
+            prepend-inner-icon="mdi-map-outline"
+            variant="underlined"
+            density="comfortable"
+            maxlength="150"
+            :rules="[reglas.requerido]"
+          />
 
-          <v-text-field v-model="form.negocio.zona" label="(*) Zona/Barrio" placeholder="Ej. Centro" variant="outlined" density="comfortable" maxlength="150" :rules="[reglas.requerido]" />
-
-          <!-- DIRECCIÓN -->
-
-          <v-text-field v-model="form.negocio.direccion" label="(*) Dirección del negocio" placeholder="Ej. Av. América #123" prepend-inner-icon="mdi-store-marker" variant="outlined" density="comfortable" maxlength="255" :rules="[reglas.requerido]" />
+          <v-text-field
+            v-model="form.negocio.direccion"
+            label="(*) Dirección del negocio"
+            placeholder="Ej. Av. América N.º 123"
+            prepend-inner-icon="mdi-home-map-marker"
+            variant="underlined"
+            density="comfortable"
+            maxlength="255"
+            :rules="[reglas.requerido]"
+          />
 
         </v-form>
 
@@ -210,11 +232,23 @@
 
         </div>
 
-        <v-form ref="formProfesional" class="mt-6" @submit.prevent>
+        <v-form ref="formProfesional" class="form-registro-minimal mt-5" @submit.prevent>
 
           <!-- TIPO PROFESIONAL -->
 
-          <v-select autofocus v-model="form.profesional.tipo_profesional_id" label="(*) Tipo de profesional" placeholder="Selecciona el tipo de profesional" :items="tiposProfesional" item-title="nombre" item-value="id" variant="outlined" density="comfortable" :rules="[reglas.requerido]" />
+          <v-text-field
+            :model-value="tipoProfesionalSeleccionado?.nombre || ''"
+            label="(*) Tipo de profesional"
+            placeholder="Toca para seleccionar"
+            prepend-inner-icon="mdi-account-tie-outline"
+            append-inner-icon="mdi-chevron-down"
+            variant="underlined"
+            density="comfortable"
+            readonly
+            :rules="[reglas.requerido]"
+            @click="abrirSelectorTipoProfesional"
+            @click:append-inner="abrirSelectorTipoProfesional"
+          />
 
           <div class="agregar-tipo">
 
@@ -230,15 +264,15 @@
 
           <!-- NOMBRES -->
 
-          <v-text-field v-model="form.profesional.nombres" label="(*) Nombres" placeholder="Ej. María Fernanda" variant="outlined" density="comfortable" maxlength="150" :rules="[reglas.nombre]" />
+          <v-text-field v-model="form.profesional.nombres" label="(*) Nombres" placeholder="Ej. María Fernanda" variant="underlined" density="comfortable" maxlength="150" :rules="[reglas.nombre]" />
 
           <!-- APELLIDOS -->
 
-          <v-text-field v-model="form.profesional.apellidos" label="(*) Apellidos" placeholder="Ej. López Sánchez" variant="outlined" density="comfortable" maxlength="150" :rules="[reglas.nombre]" />
+          <v-text-field v-model="form.profesional.apellidos" label="(*) Apellidos" placeholder="Ej. López Sánchez" variant="underlined" density="comfortable" maxlength="150" :rules="[reglas.nombre]" />
 
           <!-- TELÉFONO -->
 
-          <v-text-field v-model="form.profesional.telefono" label="(*) Teléfono personal" placeholder="Ej. 71234567" variant="outlined" density="comfortable" maxlength="15" :rules="[reglas.telefono]" />
+          <v-text-field v-model="form.profesional.telefono" label="(*) Teléfono personal" placeholder="Ej. 71234567" variant="underlined" density="comfortable" maxlength="15" :rules="[reglas.telefono]" />
 
           <!-- SEXO / FECHA -->
 
@@ -246,13 +280,13 @@
 
             <v-col cols="12" sm="6">
 
-              <v-select v-model="form.profesional.sexo" label="(*) Sexo" placeholder="Selecciona" :items="sexos" variant="outlined" density="comfortable" :rules="[reglas.sexo]" />
+              <v-select v-model="form.profesional.sexo" label="(*) Sexo" placeholder="Selecciona" :items="sexos" variant="underlined" density="comfortable" :rules="[reglas.sexo]" />
 
             </v-col>
 
             <v-col cols="12" sm="6">
 
-              <v-text-field v-model="form.profesional.fecha_nacimiento" label="(*) Fecha de nacimiento" type="date" variant="outlined" density="comfortable" :rules="[reglas.fecha]" />
+              <v-text-field v-model="form.profesional.fecha_nacimiento" label="(*) Fecha de nacimiento" type="date" variant="underlined" density="comfortable" :rules="[reglas.fecha]" />
 
             </v-col>
 
@@ -266,7 +300,7 @@
                   : 'mdi-eye-outline'
               " @click:append-inner="
                 mostrarPassword = !mostrarPassword
-              " variant="outlined" density="comfortable" :rules="[reglas.password]" />
+              " variant="underlined" density="comfortable" :rules="[reglas.password]" />
 
         </v-form>
 
@@ -349,9 +383,9 @@
 
         </v-card>
 
-        <v-form ref="formMembresia" class="mt-6" @submit.prevent>
+        <v-form ref="formMembresia" class="form-registro-minimal mt-5" @submit.prevent>
 
-          <v-text-field v-model="membresia.fecha_inicio" label="Fecha de inicio" type="date" variant="outlined" density="comfortable" :rules="[reglas.fecha]" />
+          <v-text-field v-model="membresia.fecha_inicio" label="Fecha de inicio" type="date" variant="underlined" density="comfortable" :rules="[reglas.fecha]" />
 
         </v-form>
 
@@ -413,7 +447,7 @@
 
         </div>
 
-        <v-form ref="formPago" class="pago-container mt-6" @submit.prevent>
+        <v-form ref="formPago" class="form-registro-minimal pago-container mt-5" @submit.prevent>
 
           <div class="text-body-2 text-center mb-4">
             Escanea el código QR de Gerencia PIA
@@ -453,7 +487,7 @@
 
           <!-- COMPROBANTE -->
 
-          <v-file-input v-model="form.pago.comprobante" class="mt-6" label="Comprobante de pago" hint="Imagen o PDF" persistent-hint accept="image/*,.pdf" prepend-icon="mdi-cloud-upload-outline" variant="outlined" density="comfortable" :rules="[reglas.archivo]" />
+          <v-file-input v-model="form.pago.comprobante" label="Comprobante de pago" hint="Imagen o PDF" persistent-hint accept="image/*,.pdf" prepend-icon="mdi-cloud-upload-outline" variant="underlined" density="comfortable" :rules="[reglas.archivo]" />
 
           <v-alert class="mt-4" variant="tonal" type="info">
             El comprobante será revisado por
@@ -578,6 +612,204 @@
 
   </div>
  
+  <!-- ================================================= -->
+  <!-- SELECTOR DE TIPO DE NEGOCIO -->
+  <!-- ================================================= -->
+  <v-bottom-sheet v-model="sheetTipoNegocio" scrollable>
+    <v-card class="sheet-tipos-negocio">
+      <div class="sheet-tipos-header">
+        <div>
+          <div class="text-subtitle-1 font-weight-bold">¿Qué tipo de negocio tienes?</div>
+          <div class="text-caption text-medium-emphasis">Selecciona la categoría que mejor te representa</div>
+        </div>
+        <v-btn icon="mdi-close" variant="text" size="small" aria-label="Cerrar" @click="sheetTipoNegocio = false" />
+      </div>
+
+      <v-card-text class="pt-2">
+        <v-text-field
+          v-model="busquedaTipoNegocio"
+          placeholder="Buscar tipo de negocio..."
+          prepend-inner-icon="mdi-magnify"
+          variant="solo-filled"
+          flat
+          density="comfortable"
+          hide-details
+          clearable
+          class="mb-3"
+        />
+
+        <div v-if="tiposNegocioFiltrados.length" class="sheet-tipos-grid">
+          <button
+            v-for="tipo in tiposNegocioFiltrados"
+            :key="tipo.id"
+            type="button"
+            class="sheet-tipo-opcion"
+            :class="{ 'sheet-tipo-opcion--activo': Number(form.negocio.tipo_negocio_id) === Number(tipo.id) }"
+            @click="seleccionarTipoNegocio(tipo)"
+          >
+            <span class="sheet-tipo-icono">
+              <v-icon :icon="tipo.icono || 'mdi-store-outline'" size="23" />
+            </span>
+            <span class="sheet-tipo-nombre">{{ tipo.nombre }}</span>
+            <v-icon
+              v-if="Number(form.negocio.tipo_negocio_id) === Number(tipo.id)"
+              class="sheet-tipo-check"
+              icon="mdi-check-circle"
+              size="18"
+            />
+          </button>
+        </div>
+
+        <div v-else class="text-center text-body-2 text-medium-emphasis py-8">
+          No encontramos tipos de negocio con ese nombre.
+        </div>
+
+        <v-btn
+          block
+          color="primary"
+          variant="tonal"
+          prepend-icon="mdi-plus"
+          class="mt-3"
+          @click="sheetTipoNegocio = false; abrirDialogoTipoNegocio()"
+        >
+          No encuentro mi tipo de negocio
+        </v-btn>
+      </v-card-text>
+    </v-card>
+  </v-bottom-sheet>
+
+  <!-- ================================================= -->
+  <!-- SELECTOR DE TIPO DE PROFESIONAL -->
+  <!-- ================================================= -->
+  <v-bottom-sheet v-model="sheetTipoProfesional" scrollable>
+    <v-card class="sheet-tipos-negocio">
+      <div class="sheet-tipos-header">
+        <div>
+          <div class="text-subtitle-1 font-weight-bold">¿Qué tipo de profesional eres?</div>
+          <div class="text-caption text-medium-emphasis">Selecciona la especialidad que mejor te representa</div>
+        </div>
+        <v-btn icon="mdi-close" variant="text" size="small" aria-label="Cerrar" @click="sheetTipoProfesional = false" />
+      </div>
+
+      <v-card-text class="pt-2">
+        <v-text-field
+          v-model="busquedaTipoProfesional"
+          placeholder="Buscar tipo de profesional..."
+          prepend-inner-icon="mdi-magnify"
+          variant="solo-filled"
+          flat
+          density="comfortable"
+          hide-details
+          clearable
+          class="mb-3"
+        />
+
+        <div v-if="tiposProfesionalFiltrados.length" class="sheet-tipos-grid">
+          <button
+            v-for="tipo in tiposProfesionalFiltrados"
+            :key="tipo.id"
+            type="button"
+            class="sheet-tipo-opcion"
+            :class="{ 'sheet-tipo-opcion--activo': Number(form.profesional.tipo_profesional_id) === Number(tipo.id) }"
+            @click="seleccionarTipoProfesional(tipo)"
+          >
+            <span class="sheet-tipo-icono">
+              <v-icon icon="mdi-account-tie-outline" size="23" />
+            </span>
+            <span class="sheet-tipo-nombre">{{ tipo.nombre }}</span>
+            <v-icon
+              v-if="Number(form.profesional.tipo_profesional_id) === Number(tipo.id)"
+              class="sheet-tipo-check"
+              icon="mdi-check-circle"
+              size="18"
+            />
+          </button>
+        </div>
+
+        <div v-else class="text-center text-body-2 text-medium-emphasis py-8">
+          No encontramos tipos de profesional con ese nombre.
+        </div>
+
+        <v-btn
+          block
+          color="primary"
+          variant="tonal"
+          prepend-icon="mdi-plus"
+          class="mt-3"
+          @click="sheetTipoProfesional = false; abrirDialogoTipoProfesional()"
+        >
+          No encuentro mi tipo de profesional
+        </v-btn>
+      </v-card-text>
+    </v-card>
+  </v-bottom-sheet>
+
+  <!-- ================================================= -->
+  <!-- SELECTOR DE TIPO DE PROFESIONAL -->
+  <!-- ================================================= -->
+  <v-bottom-sheet v-model="sheetTipoProfesional" scrollable>
+    <v-card class="sheet-tipos-negocio">
+      <div class="sheet-tipos-header">
+        <div>
+          <div class="text-subtitle-1 font-weight-bold">¿Qué tipo de profesional eres?</div>
+          <div class="text-caption text-medium-emphasis">Selecciona la especialidad que mejor te representa</div>
+        </div>
+        <v-btn icon="mdi-close" variant="text" size="small" aria-label="Cerrar" @click="sheetTipoProfesional = false" />
+      </div>
+
+      <v-card-text class="pt-2">
+        <v-text-field
+          v-model="busquedaTipoProfesional"
+          placeholder="Buscar tipo de profesional..."
+          prepend-inner-icon="mdi-magnify"
+          variant="solo-filled"
+          flat
+          density="comfortable"
+          hide-details
+          clearable
+          class="mb-3"
+        />
+
+        <div v-if="tiposProfesionalFiltrados.length" class="sheet-tipos-grid">
+          <button
+            v-for="tipo in tiposProfesionalFiltrados"
+            :key="tipo.id"
+            type="button"
+            class="sheet-tipo-opcion"
+            :class="{ 'sheet-tipo-opcion--activo': Number(form.profesional.tipo_profesional_id) === Number(tipo.id) }"
+            @click="seleccionarTipoProfesional(tipo)"
+          >
+            <span class="sheet-tipo-icono">
+              <v-icon icon="mdi-account-tie-outline" size="23" />
+            </span>
+            <span class="sheet-tipo-nombre">{{ tipo.nombre }}</span>
+            <v-icon
+              v-if="Number(form.profesional.tipo_profesional_id) === Number(tipo.id)"
+              class="sheet-tipo-check"
+              icon="mdi-check-circle"
+              size="18"
+            />
+          </button>
+        </div>
+
+        <div v-else class="text-center text-body-2 text-medium-emphasis py-8">
+          No encontramos tipos de profesional con ese nombre.
+        </div>
+
+        <v-btn
+          block
+          color="primary"
+          variant="tonal"
+          prepend-icon="mdi-plus"
+          class="mt-3"
+          @click="sheetTipoProfesional = false; abrirDialogoTipoProfesional()"
+        >
+          No encuentro mi tipo de profesional
+        </v-btn>
+      </v-card-text>
+    </v-card>
+  </v-bottom-sheet>
+
   <!-- ================================================= -->
   <!-- DIALOGO - NUEVO TIPO DE NEGOCIO -->
   <!-- ================================================= -->
@@ -767,39 +999,101 @@
   <!-- ================================================= -->
   <!-- DIALOGO - NUEVO TIPO DE PROFESIONAL -->
   <!-- ================================================= -->
-  <v-dialog v-model="dialogoTipoProfesional" max-width="450">
+  <v-dialog
+    v-model="dialogoTipoProfesional"
+    max-width="450"
+    width="calc(100% - 24px)"
+    scrollable
+  >
+    <v-card class="dialogo-tipo-card">
+      <v-card-title class="dialogo-tipo-header">
+        <div class="dialogo-tipo-header-icon">
+          <v-icon size="28">mdi-account-plus-outline</v-icon>
+        </div>
 
-    <v-card>
+        <div class="flex-grow-1">
+          <div class="text-h6 font-weight-bold">Nuevo tipo de profesional</div>
+          <div class="dialogo-tipo-subtitulo">
+            Añade una especialidad para identificar tu experiencia
+          </div>
+        </div>
 
-      <v-card-title class="pa-5 bg-primary">
-        Nuevo tipo de profesional
+        <v-btn
+          icon="mdi-close"
+          variant="text"
+          color="white"
+          size="small"
+          aria-label="Cerrar"
+          @click="cerrarDialogoTipoProfesional"
+        />
       </v-card-title>
 
-      <v-card-text>
+      <v-card-text class="dialogo-tipo-contenido">
+        <div class="dialogo-form-intro">
+          <div class="dialogo-form-intro-icon">
+            <v-icon size="21">mdi-lightbulb-on-outline</v-icon>
+          </div>
+          <div>
+            <div class="dialogo-form-intro-title">Cuéntanos la especialidad</div>
+            <div class="dialogo-form-intro-text">
+              Escribe un nombre claro para que los clientes puedan reconocerte.
+            </div>
+          </div>
+        </div>
 
         <v-form ref="formTipoProfesional" @submit.prevent>
+          <v-text-field
+            v-model="nuevoTipoProfesional.nombre"
+            autofocus
+            label="(*) Nombre de la especialidad"
+            placeholder="Ej. Estilista, colorista, manicurista"
+            prepend-inner-icon="mdi-account-tie-outline"
+            variant="underlined"
+            density="comfortable"
+            maxlength="100"
+            counter="100"
+            :rules="[reglas.tipoNombre]"
+          />
 
-          <v-text-field v-model="nuevoTipoProfesional.nombre" label="Nombre" placeholder="Ej. Estilista" variant="outlined" density="comfortable" maxlength="100" counter="100" :rules="[reglas.tipoNombre]" />
-
-          <v-textarea v-model="nuevoTipoProfesional.descripcion" label="Descripción" placeholder="Describe el tipo de profesional" variant="outlined" density="comfortable" maxlength="255" counter="255" :rules="[reglas.requerido]" />
-
+          <v-textarea
+            v-model="nuevoTipoProfesional.descripcion"
+            label="Descripción"
+            placeholder="Describe brevemente esta especialidad y los servicios que realiza"
+            prepend-inner-icon="mdi-text"
+            variant="underlined"
+            density="comfortable"
+            maxlength="255"
+            counter="255"
+            rows="3"
+            auto-grow
+            class="mt-3"
+          />
         </v-form>
-
       </v-card-text>
 
-      <v-card-actions class="px-5 pb-5">
-        <v-spacer />
-        <v-btn prepend-icon="mdi-close" color="error" variant="outlined" @click="cerrarDialogoTipoProfesional">
+      <v-card-actions class="dialogo-tipo-acciones">
+        <v-btn
+          prepend-icon="mdi-close"
+          color="error"
+          variant="outlined"
+          @click="cerrarDialogoTipoProfesional"
+        >
           Cancelar
         </v-btn>
 
-        <v-btn variant="elevated" class="ms-4" prepend-icon="mdi-content-save" append-icon="mdi-chevron-right" color="primary" @click="guardarTipoProfesional">
+        <v-spacer />
+
+        <v-btn
+          variant="elevated"
+          class="btn-guardar-tipo"
+          prepend-icon="mdi-content-save"
+          color="primary"
+          @click="guardarTipoProfesional"
+        >
           Guardar
         </v-btn>
       </v-card-actions>
-
     </v-card>
-
   </v-dialog>
 
 </v-container>
@@ -813,6 +1107,7 @@
 
 <script>
 import { urlQrGerencia } from '@/utils/ayuda';
+import { piaAlert } from '@/services/piaAlert';
 import { getManagement } from '../../gerencia/services/gerencia.api';
 import { getProfessionalsTypes } from '../../profesional/services/profesional.api';
 import { saveBusinessProfession } from '../services/negocio.api';
@@ -1037,6 +1332,10 @@ export default {
       // ============================================
       tiposNegocio: [],
       tiposProfesional: [],
+      sheetTipoNegocio: false,
+      busquedaTipoNegocio: "",
+      sheetTipoProfesional: false,
+      busquedaTipoProfesional: "",
       
       iconosNegocio: [
         { label: "Salón", value: "mdi-face-woman" },
@@ -1113,6 +1412,36 @@ export default {
   },
 
   computed: {
+    tipoNegocioSeleccionado() {
+      return this.tiposNegocio.find(
+        (tipo) => Number(tipo.id) === Number(this.form.negocio.tipo_negocio_id)
+      ) || null;
+    },
+
+    tiposNegocioFiltrados() {
+      const busqueda = String(this.busquedaTipoNegocio || "").trim().toLocaleLowerCase("es");
+      if (!busqueda) return this.tiposNegocio;
+
+      return this.tiposNegocio.filter((tipo) =>
+        String(tipo.nombre || "").toLocaleLowerCase("es").includes(busqueda)
+      );
+    },
+
+    tipoProfesionalSeleccionado() {
+      return this.tiposProfesional.find(
+        (tipo) => Number(tipo.id) === Number(this.form.profesional.tipo_profesional_id)
+      ) || null;
+    },
+
+    tiposProfesionalFiltrados() {
+      const busqueda = String(this.busquedaTipoProfesional || "").trim().toLocaleLowerCase("es");
+      if (!busqueda) return this.tiposProfesional;
+
+      return this.tiposProfesional.filter((tipo) =>
+        String(tipo.nombre || "").toLocaleLowerCase("es").includes(busqueda)
+      );
+    },
+
     // ============================================
     // FECHA FIN DE MEMBRESÍA
     // ============================================
@@ -1292,6 +1621,34 @@ export default {
     },
 
     // ==================================================
+    // SELECTOR TIPO DE NEGOCIO
+    // ==================================================
+
+    abrirSelectorTipoNegocio() {
+      this.busquedaTipoNegocio = "";
+      this.sheetTipoNegocio = true;
+    },
+
+    seleccionarTipoNegocio(tipo) {
+      this.form.negocio.tipo_negocio_id = tipo.id;
+      this.form.negocio.tipo_negocio = tipo;
+      this.sheetTipoNegocio = false;
+      this.busquedaTipoNegocio = "";
+    },
+
+    abrirSelectorTipoProfesional() {
+      this.busquedaTipoProfesional = "";
+      this.sheetTipoProfesional = true;
+    },
+
+    seleccionarTipoProfesional(tipo) {
+      this.form.profesional.tipo_profesional_id = tipo.id;
+      this.form.profesional.tipo_profesional = tipo;
+      this.sheetTipoProfesional = false;
+      this.busquedaTipoProfesional = "";
+    },
+
+    // ==================================================
     // DIALOGO TIPO NEGOCIO
     // ==================================================
 
@@ -1358,7 +1715,7 @@ export default {
       // Seleccionarlo automáticamente
 
       this.form.negocio.tipo_negocio_id = nuevoTipo.id;
-      this.form.negocio.tipo_negocio = this.nuevoTipoNegocio
+      this.form.negocio.tipo_negocio = nuevoTipo;
 
       this.cerrarDialogoTipoNegocio();
     },
@@ -1453,7 +1810,7 @@ export default {
       // Seleccionarlo automáticamente
 
       this.form.profesional.tipo_profesional_id = nuevoTipo.id;
-      this.form.profesional.tipo_profesional = this.nuevoTipoProfesional
+      this.form.profesional.tipo_profesional = nuevoTipo;
 
       this.cerrarDialogoTipoProfesional();
     },
@@ -1607,29 +1964,24 @@ export default {
         const res = await saveBusinessProfession(formData)
 
         if (res.status === 201) {
-          this.$swal({
-            title: "Negocio y Profesional Creado!",
-            text: "Se ha guardado los datos del negocio y profesional correctamente!",
-            icon: "success",
-            timer: 2500,
-            didClose: () => {
-              this.pasoActual = 5;
-              this.$router.push({path: '/'})
-            }
-          })
+          piaAlert.success(
+            "Se guardaron correctamente los datos del negocio y del profesional.",
+            { title: "¡Registro enviado!", duration: 2500 }
+          );
+
+          setTimeout(() => {
+            this.pasoActual = 5;
+            this.$router.push({ path: "/" });
+          }, 2500);
         }
 
       } catch (error) {
-        this.$swal({
-          title: "Error!",
-          text:
-            error.response?.data?.message ||
-            error.response?.data?.error ||
-            error.message ||
-            "Ocurrió un error inesperado",
-          icon: "error",
-          timer: 2500
-        })
+        piaAlert.error(
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          error.message ||
+          "Ocurrió un error inesperado"
+        );
       } finally {
         this.guardando = false;
       }
@@ -1668,16 +2020,12 @@ export default {
         }
       } catch (error) {
         console.log(error)
-        this.$swal({
-          title: "Error!",
-          text:
-            error.response?.data?.message ||
-            error.response?.data?.error ||
-            error.message ||
-            "Ocurrió un error inesperado",
-          icon: "error",
-          timer: 2500,          
-        })
+        piaAlert.error(
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          error.message ||
+          "Ocurrió un error inesperado"
+        );
       } finally {
         this.overlay = false
       }
@@ -1694,16 +2042,12 @@ export default {
         }
       } catch (error) {
         console.log(error)
-        this.$swal({
-          title: "Error!",
-          text:
-            error.response?.data?.message ||
-            error.response?.data?.error ||
-            error.message ||
-            "Ocurrió un error inesperado",
-          icon: "error",
-          timer: 2500,          
-        })
+        piaAlert.error(
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          error.message ||
+          "Ocurrió un error inesperado"
+        );
       } finally {
         this.overlay = false
       }
@@ -1722,16 +2066,12 @@ export default {
         }
       } catch (error) {
         console.log(error)
-        this.$swal({
-          title: "Error!",
-          text:
-            error.response?.data?.message ||
-            error.response?.data?.error ||
-            error.message ||
-            "Ocurrió un error inesperado",
-          icon: "error",
-          timer: 2500,          
-        })
+        piaAlert.error(
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          error.message ||
+          "Ocurrió un error inesperado"
+        );
       } finally {
         this.overlay = false
       }
@@ -2360,6 +2700,244 @@ export default {
   .dialogo-tipo-acciones .v-btn {
     font-size: 12px;
   }
+}
+
+
+
+/* =========================================================
+   ELEMENTOS COMPARTIDOS DE LOS DIÁLOGOS
+========================================================= */
+.dialogo-form-intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-bottom: 20px;
+  padding: 13px;
+  border: 1px solid #dcefeb;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f0fbf9, #f8fcfc);
+}
+
+.dialogo-form-intro-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  color: #078f89;
+  background: #ddf5f1;
+}
+
+.dialogo-form-intro-title {
+  color: #244557;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dialogo-form-intro-text {
+  margin-top: 3px;
+  color: #718293;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.dialogo-tipo-contenido :deep(.v-field) {
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.dialogo-tipo-contenido :deep(.v-field__underlay) {
+  background: transparent !important;
+}
+
+.dialogo-tipo-contenido :deep(.v-field--underlined .v-field__outline::after) {
+  border-color: #dce7e8 !important;
+  opacity: 1;
+}
+
+.dialogo-tipo-contenido :deep(.v-field--focused .v-field__outline::after) {
+  border-color: #0f9993 !important;
+  border-width: 0 0 2px !important;
+}
+
+.dialogo-tipo-contenido :deep(.v-field__prepend-inner > .v-icon) {
+  color: #0b9993;
+}
+
+.dialogo-tipo-contenido :deep(.v-field__input) {
+  font-size: 14px;
+  color: #263b4b;
+}
+
+.dialogo-tipo-contenido :deep(.v-label) {
+  color: #718293;
+  font-size: 13px;
+}
+
+/* =========================================================
+   FORMULARIO MÓVIL MINIMALISTA - PASO NEGOCIO
+   ========================================================= */
+.form-registro-minimal {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* Un solo lenguaje visual para negocio, profesional, membresía y pago. */
+.form-registro-minimal :deep(.v-field) {
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.form-registro-minimal :deep(.v-field__underlay) {
+  background: transparent !important;
+}
+
+.form-registro-minimal :deep(.v-field--underlined .v-field__outline::after) {
+  border-color: #dce7e8 !important;
+  opacity: 1;
+}
+
+.form-registro-minimal :deep(.v-field--focused .v-field__outline::after) {
+  border-color: #0f9993 !important;
+  border-width: 0 0 2px !important;
+}
+
+.form-registro-minimal :deep(.v-field__input) {
+  min-height: 48px;
+  padding-top: 10px;
+  padding-bottom: 8px;
+  font-size: 14px;
+  color: #263b4b;
+}
+
+.form-registro-minimal :deep(.v-label) {
+  color: #718293;
+  font-size: 13px;
+}
+
+.form-registro-minimal :deep(.v-field__prepend-inner > .v-icon),
+.form-registro-minimal :deep(.v-field__append-inner > .v-icon) {
+  color: #0b9993;
+  opacity: .9;
+}
+
+.form-registro-minimal :deep(.v-input__details) {
+  padding-inline-start: 0;
+}
+
+.form-registro-minimal :deep(.v-messages) {
+  font-size: 11px;
+}
+
+.form-registro-minimal :deep(.v-file-input .v-field__input) {
+  min-height: 48px;
+}
+
+.form-registro-minimal .form-subtitulo {
+  margin: 7px 0 -3px;
+  color: #078b86;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.form-registro-minimal .agregar-tipo {
+  margin-top: -13px;
+  margin-bottom: 1px;
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+/* El bottom sheet se muestra como panel limpio, no como botones HTML */
+:deep(.sheet-tipos-negocio) {
+  width: 100%;
+  max-height: min(78vh, 680px);
+  overflow: hidden;
+  border-radius: 22px 22px 0 0 !important;
+  background: #fff;
+}
+
+:deep(.sheet-tipos-header) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 20px 12px;
+}
+
+:deep(.sheet-tipos-header .text-subtitle-1) {
+  color: #183548;
+  font-size: 17px !important;
+  letter-spacing: -.2px;
+}
+
+:deep(.sheet-tipos-grid) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+:deep(.sheet-tipo-opcion) {
+  appearance: none;
+  -webkit-appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  min-height: 62px;
+  padding: 10px 11px;
+  border: 1px solid #e7eeee;
+  border-radius: 13px;
+  background: #fff;
+  color: #385064;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease;
+}
+
+:deep(.sheet-tipo-opcion:active),
+:deep(.sheet-tipo-opcion--activo) {
+  border-color: #0b9993;
+  background: #effaf8;
+}
+
+:deep(.sheet-tipo-icono) {
+  display: grid;
+  place-items: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: #eaf7f6;
+  color: #078f89;
+}
+
+:deep(.sheet-tipo-nombre) {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.3;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+
+:deep(.sheet-tipo-check) {
+  flex: 0 0 auto;
+  color: #078f89;
+}
+
+@media (max-width: 380px) {
+  :deep(.sheet-tipos-header) { padding: 17px 16px 10px; }
+  :deep(.sheet-tipos-grid) { gap: 7px; }
+  :deep(.sheet-tipo-opcion) { min-height: 58px; padding: 8px; gap: 7px; }
+  :deep(.sheet-tipo-icono) { flex-basis: 32px; width: 32px; height: 32px; }
+  :deep(.sheet-tipo-nombre) { font-size: 11px; }
 }
 
 </style>

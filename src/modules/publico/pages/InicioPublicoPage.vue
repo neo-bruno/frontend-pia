@@ -154,7 +154,7 @@
 
 </div>
 
-<MapaNegociosSheet v-if="hojaMapa" :key="contadorAperturasMapa" v-model="hojaMapa" :negocios="negociosDestacados" @seleccionar="abrirNegocio" />
+<MapaNegociosSheet v-if="hojaMapa" :key="contadorAperturasMapa" v-model="hojaMapa" :negocios="negociosDestacados" @seleccionar="abrirNegocio"/>
 
 <!-- Hoja inferior: ubicación -->
 <v-bottom-sheet v-model="hojaUbicacion" inset>
@@ -560,6 +560,10 @@ export default {
       // Valor compatible con el campo municipio de la BD
       municipioFiltro: "",
 
+      // Indica si el usuario eligió manualmente una ubicación.
+      // La ubicación detectada por GPS no debe ser un filtro obligatorio.
+      ubicacionSeleccionadaManualmente: false,
+
       busquedaUbicacion: "",
       municipiosPorDepartamento,
 
@@ -830,11 +834,7 @@ export default {
           limite: this.limiteServicios,
 
           ...(this.departamentoSeleccionado && {
-            departamento: this.departamentoSeleccionado,
-          }),
-
-          ...((this.municipioFiltro || this.municipioSeleccionado) && {
-            municipio: this.municipioFiltro || this.municipioSeleccionado,
+            departamentoPrioritario: this.departamentoSeleccionado,
           }),
 
           ...(tipoNegocioId && { tipoNegocioId }),
@@ -922,11 +922,7 @@ export default {
           limite: this.limiteServicios,
 
           ...(this.departamentoSeleccionado && {
-            departamento: this.departamentoSeleccionado,
-          }),
-
-          ...((this.municipioFiltro || this.municipioSeleccionado) && {
-            municipio: this.municipioFiltro || this.municipioSeleccionado,
+            departamentoPrioritario: this.departamentoSeleccionado,
           }),
 
           ...(tipoNegocioId && { tipoNegocioId }),
@@ -1253,7 +1249,22 @@ export default {
               ),
             }))
           : [];
+        console.log("FILTROS DE NEGOCIOS:", {
+  departamento: this.departamentoSeleccionado,
+  municipio: this.municipioFiltro,
+});
 
+console.log("NEGOCIOS RECIBIDOS:", lista.length);
+
+console.table(
+  lista.map((n) => ({
+    nombre: n.nombre,
+    departamento: n.departamento,
+    municipio: n.municipio,
+    latitud: n.latitud,
+    longitud: n.longitud,
+  }))
+);
       } catch (error) {
         console.error("Error al cargar negocios públicos:", error);
 
@@ -1308,17 +1319,29 @@ export default {
     construirFiltrosBusqueda() {
       const filtros = {
         pagina: 1,
-        limite: 12,
-        ...(this.departamentoSeleccionado && {
-          departamento: this.departamentoSeleccionado,
-        }),
-        ...((this.municipioFiltro || this.municipioSeleccionado) && {
-          municipio: this.municipioFiltro || this.municipioSeleccionado,
-        }),
-        ...(this.textoBusqueda.trim() && {
-          buscar: this.textoBusqueda.trim(),
-        }),
+        limite: 50,
       };
+
+      // La ubicación automática o manual determina
+      // el departamento donde se realiza la búsqueda.
+      if (this.departamentoSeleccionado) {
+        filtros.departamento = this.departamentoSeleccionado;
+      }
+
+      // El municipio solamente se aplica cuando
+      // el usuario lo selecciona manualmente.
+      if (this.ubicacionSeleccionadaManualmente) {
+        const municipio =
+          this.municipioFiltro || this.municipioSeleccionado;
+
+        if (municipio) {
+          filtros.municipio = municipio;
+        }
+      }
+
+      if (this.textoBusqueda.trim()) {
+        filtros.buscar = this.textoBusqueda.trim();
+      }
 
       return filtros;
     },
@@ -1744,6 +1767,7 @@ export default {
       this.departamentoSeleccionado = "";
       this.municipioSeleccionado = "";
       this.municipioFiltro = "";
+      this.ubicacionSeleccionadaManualmente = false;
 
       this.hojaFiltros = false;
       this.hojaCategorias = false;
@@ -1757,30 +1781,13 @@ export default {
 
     // =========================================
     // UBICACIÓN
-    // =========================================
+    // =========================================    
     async seleccionarUbicacion(lugar) {
+      this.ubicacionSeleccionadaManualmente = true;
+
       this.departamentoSeleccionado = lugar.departamento;
       this.municipioSeleccionado = lugar.municipio;
-
-      // Mantener compatibilidad con municipio de BD.
-      const normalizar = (texto) =>
-        String(texto || "")
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .toLowerCase()
-          .trim();
-
-      // En los registros actuales de PIA:
-      // Municipio del catálogo: Cochabamba
-      // Municipio en BD: Cercado
-      if (
-        normalizar(lugar.departamento) === "cochabamba" &&
-        normalizar(lugar.municipio) === "cochabamba"
-      ) {
-        this.municipioFiltro = "Cercado";
-      } else {
-        this.municipioFiltro = lugar.municipio;
-      }
+      this.municipioFiltro = lugar.municipio;
 
       console.log("UBICACIÓN SELECCIONADA:", {
         departamento: this.departamentoSeleccionado,
@@ -1795,8 +1802,7 @@ export default {
         return;
       }
 
-      // Si la ubicación se seleccionó fuera de los filtros,
-      // conservar el comportamiento de búsqueda inmediata.
+      // Actualizar negocios y servicios.
       await Promise.all([
         this.obtenerNegocios(),
         this.obtenerServicios(),
@@ -1911,6 +1917,7 @@ export default {
         const municipioBaseDatos =
           direccion.county || municipioCatalogo;
 
+        this.ubicacionSeleccionadaManualmente = false;
         this.departamentoSeleccionado = departamentoCatalogo;
         this.municipioSeleccionado = municipioCatalogo;
         this.municipioFiltro = municipioBaseDatos;
@@ -2234,9 +2241,64 @@ export default {
       this.dialogoLoginCliente = false;
       this.$router.push("/cliente").catch(() => {});
     },
+    
+    actualizarUbicacionPublica(evento) {
+      const ubicacion = evento.detail || {};
+
+      if (!ubicacion.departamento || !ubicacion.municipio) {
+        return;
+      }
+
+      this.departamentoSeleccionado = ubicacion.departamento;
+      this.municipioSeleccionado = ubicacion.municipio;
+      this.municipioFiltro = ubicacion.municipio;
+
+      console.log("UBICACIÓN PÚBLICA ACTUALIZADA:", {
+        departamento: this.departamentoSeleccionado,
+        municipio: this.municipioSeleccionado,
+        municipioFiltro: this.municipioFiltro,
+      });
+
+      if (this.tipoBusqueda === "servicio") {
+        this.obtenerServicios();
+      } else {
+        this.obtenerServicios();
+        this.obtenerNegocios();
+      }
+    },
   },
 
   async mounted() {
+    try {
+      const guardada = localStorage.getItem("pia_ubicacion_publica");
+
+      if (guardada) {
+        const ubicacion = JSON.parse(guardada);
+
+        this.departamentoSeleccionado =
+          ubicacion.departamento || "";
+
+        this.municipioSeleccionado =
+          ubicacion.municipio || "";
+
+        const normalizar = (texto) =>
+          String(texto || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase()
+            .trim();
+
+        this.municipioFiltro = ubicacion.municipio || "";
+      }
+    } catch (error) {
+      console.warn("Error recuperando ubicación:", error);
+    }
+
+    window.addEventListener(
+      "pia:ubicacion-cambiada",
+      this.actualizarUbicacionPublica
+    );
+
     await this.obtenerFavoritosNegocios();
 
     this.obtenerNegocios();
@@ -2247,6 +2309,10 @@ export default {
     this.obtenerDescuentosBanner();
   },
   beforeUnmount() {
+    window.removeEventListener(
+      "pia:ubicacion-cambiada",
+      this.actualizarUbicacionPublica
+    );
     if (this.temporizadorDescuentos) {
       clearInterval(this.temporizadorDescuentos);
       this.temporizadorDescuentos = null;
@@ -2263,7 +2329,7 @@ export default {
 
   width: 100%;
   min-width: 0;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* =====================================
@@ -2356,8 +2422,10 @@ export default {
    BÚSQUEDA
 ===================================== */
 .search-panel {
-  position: relative;
-  z-index: 3;
+  position: sticky;
+  top: 72px;
+  z-index: 1050;
+
   display: flex;
   align-items: center;
   gap: 7px;

@@ -865,6 +865,7 @@ export default {
           "Los datos del negocio se guardaron correctamente.",
           { title: "Cambios guardados" }
         );
+        
       } catch (error) {
         console.error("Error al guardar el negocio:", error);
 
@@ -877,6 +878,7 @@ export default {
         );
       } finally {
         this.guardando = false;
+        this.$router.back()
       }
     },
 

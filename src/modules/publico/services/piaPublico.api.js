@@ -8,6 +8,13 @@ export function getNegocios(params = {}) {
 }
 
 // =====================================================
+// TODOS LOS NEGOCIOS PÚBLICOS PARA EL MAPA
+// =====================================================
+export function getNegociosParaMapa() {
+	return http().get("/pia-publico/mapa/negocios");
+}
+
+// =====================================================
 // SERVICIOS PÚBLICOS DE PIA
 // =====================================================
 export function getServicios(params = {}) {

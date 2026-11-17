@@ -527,10 +527,7 @@ export default {
         const respuesta = await obtenerDatosNegocio();
         const data = respuesta.data?.data?? respuesta.data;
 
-        this.negocio = data || {};
-        console.log("NEGOCIO RECIBIDO:", this.negocio);
-        console.log("URL PORTADA:", this.urlImagen(this.negocio.portada));
-        console.log("URL LOGO:", this.urlImagen(this.negocio.logo));
+        this.negocio = data || {};        
         this.form = {
           eslogan: data?.eslogan || "",
           informacion: data?.informacion || "",
@@ -696,6 +693,7 @@ export default {
         );
       } finally {
         this.guardando = false;
+        this.$router.back()
       }
     },
 

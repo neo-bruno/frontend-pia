@@ -9,8 +9,8 @@
         <div>
           <h2>Negocios en el mapa</h2>
           <p>
-            {{ negociosConCoordenadas.length }}
-            negocios con ubicación
+            {{ negociosConCoordenadas.length }} negocios ubicados
+            · {{ negociosSinCoordenadas.length }} sin ubicación
           </p>
         </div>
       </div>
@@ -28,6 +28,45 @@
       {{ errorUbicacion }}
     </div>
 
+    <!-- CARGA DE TODOS LOS NEGOCIOS -->
+    <div v-if="cargandoNegociosMapa" class="map-status">
+      <v-progress-circular
+        indeterminate
+        color="#079b98"
+        size="17"
+        width="2"
+      />
+      Cargando todos los negocios de PIA...
+    </div>
+
+    <!-- ERROR DE CARGA -->
+    <div v-if="errorNegociosMapa" class="map-status">
+      {{ errorNegociosMapa }}
+
+      <v-btn
+        size="small"
+        color="primary"
+        variant="text"
+        @click="cargarNegociosMapa"
+      >
+        Reintentar
+      </v-btn>
+    </div>
+
+    <div v-if="cargandoBusqueda" class="map-status">
+      <v-progress-circular
+        indeterminate
+        color="#079b98"
+        size="16"
+        width="2"
+      />
+      Buscando negocios en PIA...
+    </div>
+
+    <div v-if="errorBusqueda" class="map-status">
+      {{ errorBusqueda }}
+    </div>
+
     <div ref="mapElement" class="leaflet-map"></div>
 
     <section class="map-results">
@@ -38,11 +77,19 @@
         <span>Selecciona un local para ubicarlo</span>
       </div>
 
-      <div v-if="!negociosFiltrados.length" class="empty-results">
+      <div v-if="!cargandoBusqueda && !negociosFiltrados.length" class="empty-results">
         <v-icon size="30">mdi-store-search-outline</v-icon>
-        <p>
-          No hay negocios que coincidan con la búsqueda y tengan
-          coordenadas registradas.
+
+        <p v-if="textoBusqueda.trim().length < 2 && textoBusqueda.trim()">
+          Escribe al menos dos caracteres para buscar un negocio.
+        </p>
+
+        <p v-else-if="textoBusqueda.trim()">
+          No encontramos negocios que coincidan con "{{ textoBusqueda }}".
+        </p>
+
+        <p v-else>
+          No hay negocios disponibles para mostrar.
         </p>
       </div>
 
@@ -67,7 +114,7 @@
           </small>
         </div>
 
-        <v-icon color="#079b98">mdi-map-marker</v-icon>
+        <v-icon :color="negociosConCoordenadas.some(n => String(n.id) === String(negocio.id)) ? '#079b98' : '#94a3b8'">mdi-map-marker</v-icon>
       </button>
     </section>
   </v-card>
@@ -77,9 +124,8 @@
 <script>
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import {
-  getFileUrl
-} from "@/utils/ayuda";
+import { getFileUrl } from "@/utils/ayuda";
+import { getNegociosParaMapa } from "../services/piaPublico.api.js";
 
 export default {
   name: "MapaNegociosSheet",
@@ -106,12 +152,50 @@ export default {
       textoBusqueda: "",
       localizando: false,
       errorUbicacion: "",
+
+      // Búsqueda remota de negocios
+      resultadosBusqueda: [],
+      cargandoBusqueda: false,
+      errorBusqueda: "",
+      temporizadorBusqueda: null,
+      contadorBusqueda: 0,
+
+      // Catálogo completo de negocios para el mapa
+      negociosMapa: [],
+      cargandoNegociosMapa: false,
+      errorNegociosMapa: "",
+      negociosMapaCargados: false,
+      contadorCargaMapa: 0,
     };
   },
 
   computed: {
+    negociosFiltrados() {
+      const texto = this.textoBusqueda
+        .trim()
+        .toLocaleLowerCase("es");
+
+      if (!texto) return this.negociosMapa;
+
+      return this.negociosMapa.filter((negocio) => {
+        const contenido = [
+          negocio.nombre,
+          negocio.tipo_negocio,
+          negocio.zona,
+          negocio.municipio,
+          negocio.departamento,
+          negocio.direccion,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLocaleLowerCase("es");
+
+        return contenido.includes(texto);
+      });
+    },
+
     negociosConCoordenadas() {
-      return this.negocios.filter((negocio) => {
+      return this.negociosFiltrados.filter((negocio) => {
         const lat = Number(negocio.latitud);
         const lng = Number(negocio.longitud);
 
@@ -132,41 +216,27 @@ export default {
       });
     },
 
-    negociosFiltrados() {
-      const texto = this.textoBusqueda.trim().toLocaleLowerCase("es");
-
-      if (!texto) return this.negociosConCoordenadas;
-
-      return this.negociosConCoordenadas.filter((negocio) => {
-        const contenido = [
-            negocio.nombre,
-            negocio.tipo_negocio,
-            negocio.zona,
-            negocio.municipio,
-            negocio.departamento,
-            negocio.direccion,
-          ]
-          .filter(Boolean)
-          .join(" ")
-          .toLocaleLowerCase("es");
-
-        return contenido.includes(texto);
-      });
+    negociosSinCoordenadas() {
+      return this.negociosFiltrados.filter(
+        (negocio) => !this.negociosConCoordenadas.some(
+          (ubicado) => String(ubicado.id) === String(negocio.id)
+        )
+      );
     },
   },
 
   watch: {
     modelValue(abierto) {
       if (abierto) {
+        this.cargarNegociosMapa();
+
         this.$nextTick(() => {
           this.inicializarMapa();
 
-          // Recalcular después de que el sheet se haga visible.
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
               if (this.mapa) {
                 this.mapa.invalidateSize({ pan: false });
-
                 this.actualizarMarcadores();
               }
             });
@@ -189,19 +259,108 @@ export default {
         this.actualizarMarcadores();
       });
     },
+
+    textoBusqueda() {
+      this.programarBusqueda();
+    },
   },
 
   mounted() {
     if (this.modelValue) {
-      this.$nextTick(() => this.inicializarMapa());
+      this.cargarNegociosMapa();
+
+      this.$nextTick(() => {
+        this.inicializarMapa();
+      });
     }
   },
 
   beforeUnmount() {
+    this.contadorCargaMapa++;
     this.destruirMapa();
   },
 
   methods: {
+    // =====================================================
+    // CARGAR TODOS LOS NEGOCIOS PARA EL MAPA
+    // =====================================================
+    async cargarNegociosMapa() {
+      // Evitar consultas duplicadas.
+      if (
+        this.cargandoNegociosMapa ||
+        this.negociosMapaCargados
+      ) {
+        return;
+      }
+
+      const numeroCarga = ++this.contadorCargaMapa;
+
+      this.cargandoNegociosMapa = true;
+      this.errorNegociosMapa = "";
+
+      try {
+        const respuesta = await getNegociosParaMapa();
+
+        // Ignorar respuestas de solicitudes anteriores.
+        if (numeroCarga !== this.contadorCargaMapa) {
+          return;
+        }
+
+        const body = respuesta?.data || {};
+
+        const datos = Array.isArray(body.datos)
+          ? body.datos
+          : [];
+
+        // Normalizar los datos sin perder coordenadas ni otros campos.
+        this.negociosMapa = datos.map((negocio) => ({
+          ...negocio,
+          id: negocio.id ?? negocio.negocio_id,
+          nombre: negocio.nombre || negocio.negocio_nombre || "",
+          imagen:
+            negocio.imagen ||
+            negocio.logo ||
+            negocio.portada ||
+            negocio.imagen_portada ||
+            "",
+        })).filter((negocio) =>
+          negocio.id !== null &&
+          negocio.id !== undefined
+        );
+
+        this.negociosMapaCargados = true;
+
+        console.log(
+          "NEGOCIOS COMPLETOS DEL MAPA:",
+          this.negociosMapa.length
+        );
+
+        this.$nextTick(() => {
+          this.actualizarMarcadores();
+        });
+
+      } catch (error) {
+        if (numeroCarga !== this.contadorCargaMapa) {
+          return;
+        }
+
+        console.error(
+          "Error al cargar los negocios del mapa:",
+          error
+        );
+
+        this.errorNegociosMapa =
+          error.response?.data?.mensaje ||
+          error.response?.data?.message ||
+          "No pudimos cargar todos los negocios. Inténtalo nuevamente.";
+
+      } finally {
+        if (numeroCarga === this.contadorCargaMapa) {
+          this.cargandoNegociosMapa = false;
+        }
+      }
+    },
+
     inicializarMapa() {
       const elemento = this.$refs.mapElement;
 
@@ -232,14 +391,16 @@ export default {
 
       setTimeout(() => this.mapa?.invalidateSize(), 250);
     },
-   
+    
     actualizarMarcadores() {
       if (!this.mapa) return;
 
+      // Eliminar los marcadores anteriores.
       this.marcadores.forEach((marcador) => marcador.remove());
       this.marcadores = [];
 
-      this.negociosFiltrados.forEach((negocio) => {
+      // Utilizar exclusivamente negocios con coordenadas reales y válidas.
+      this.negociosConCoordenadas.forEach((negocio) => {
         const lat = Number(negocio.latitud);
         const lng = Number(negocio.longitud);
 
@@ -291,13 +452,14 @@ export default {
         this.marcadores.push(marcador);
       });
 
+      // Ajustar el mapa solamente con marcadores válidos.
       if (this.marcadores.length > 1) {
         const limites = L.featureGroup(this.marcadores).getBounds();
 
         if (limites.isValid()) {
           this.mapa.fitBounds(limites, {
             padding: [35, 35],
-            maxZoom: 15,
+            maxZoom: 16,
             animate: true,
           });
         }
@@ -307,13 +469,24 @@ export default {
           15,
           { animate: true }
         );
+      } else {
+        // Si no hay negocios ubicados, mantener Cochabamba como centro.
+        this.mapa.setView([-17.3935, -66.157], 12);
       }
     },
         
     seleccionarNegocio(negocio) {
       this.negocioSeleccionado = negocio;
 
-      if (this.mapa) {
+      const tieneCoordenadas =
+        negocio.latitud !== null &&
+        negocio.latitud !== undefined &&
+        negocio.latitud !== "" &&
+        negocio.longitud !== null &&
+        negocio.longitud !== undefined &&
+        negocio.longitud !== "";
+
+      if (this.mapa && tieneCoordenadas) {
         this.mapa.setView(
           [Number(negocio.latitud), Number(negocio.longitud)],
           16,
@@ -326,10 +499,7 @@ export default {
       this.$emit("seleccionar", negocio);
 
       if (!negocio.slug) {
-        console.error(
-          "No se puede abrir el perfil: el negocio no tiene slug.",
-          negocio
-        );
+        console.error("El negocio no tiene slug:", negocio);
         return;
       }
 
@@ -337,7 +507,7 @@ export default {
         path: `/perfil/negocio/${encodeURIComponent(negocio.slug)}`,
       }).catch((error) => {
         if (error.name !== "NavigationDuplicated") {
-          console.error("Error al abrir el perfil del negocio:", error);
+          console.error("Error al abrir el perfil:", error);
         }
       });
     },
@@ -424,6 +594,134 @@ export default {
 
       this.marcadores = [];
       this.marcadorUsuario = null;
+    },
+
+    programarBusqueda() {
+      // Cancelar la búsqueda pendiente.
+      if (this.temporizadorBusqueda) {
+        clearTimeout(this.temporizadorBusqueda);
+        this.temporizadorBusqueda = null;
+      }
+
+      // Invalidar cualquier petición anterior.
+      this.contadorBusqueda++;
+
+      const texto = this.textoBusqueda.trim();
+
+      this.errorBusqueda = "";
+      this.resultadosBusqueda = [];
+
+      if (!texto) {
+        this.cargandoBusqueda = false;
+        this.$nextTick(() => this.actualizarMarcadores());
+        return;
+      }
+
+      if (texto.length < 2) {
+        this.cargandoBusqueda = false;
+        return;
+      }
+
+      this.temporizadorBusqueda = setTimeout(() => {
+        this.buscarNegociosEnServidor(texto);
+      }, 350);
+    },
+
+    async buscarNegociosEnServidor(texto) {
+      const numeroBusqueda = this.contadorBusqueda;
+
+      this.cargandoBusqueda = true;
+      this.errorBusqueda = "";
+
+      try {
+        const limite = 50;
+
+        let pagina = 1;
+        let totalPaginas = 1;
+
+        const negociosEncontrados = new Map();
+
+        do {
+          const respuesta = await getNegociosParaMapa({
+            pagina,
+            limite,
+            buscar: texto,
+          });
+
+          // Si el usuario escribió otra búsqueda,
+          // ignorar la respuesta anterior.
+          if (numeroBusqueda !== this.contadorBusqueda) {
+            return;
+          }
+
+          const body = respuesta?.data || {};
+
+          const lista =
+            body.datos ||
+            body.data ||
+            body.negocios ||
+            [];
+
+          const negocios = Array.isArray(lista) ? lista : [];
+
+          negocios.forEach((negocio) => {
+            const id = negocio.id;
+
+            if (id === undefined || id === null) return;
+
+            negociosEncontrados.set(String(id), {
+              ...negocio,
+              nombre: negocio.nombre || negocio.negocio_nombre || "",
+              imagen:
+                negocio.imagen ||
+                negocio.logo ||
+                negocio.portada ||
+                negocio.imagen_portada ||
+                "",
+            });
+          });
+
+          totalPaginas = Number(
+            body.paginacion?.totalPaginas || 1
+          );
+
+          pagina++;
+        } while (pagina <= totalPaginas);
+
+        if (numeroBusqueda !== this.contadorBusqueda) {
+          return;
+        }
+
+        this.resultadosBusqueda = Array.from(
+          negociosEncontrados.values()
+        );
+
+      } catch (error) {
+        if (numeroBusqueda !== this.contadorBusqueda) {
+          return;
+        }
+
+        console.error(
+          "Error al buscar negocios en el mapa:",
+          error
+        );
+
+        this.errorBusqueda =
+          error.response?.data?.mensaje ||
+          error.response?.data?.message ||
+          "No pudimos buscar los negocios. Inténtalo nuevamente.";
+
+        this.resultadosBusqueda = [];
+
+      } finally {
+        if (numeroBusqueda === this.contadorBusqueda) {
+          this.cargandoBusqueda = false;
+
+          this.$nextTick(() => {
+            this.actualizarMarcadores();
+          });
+        }
+      }
     },
   },
 };

@@ -328,119 +328,138 @@ export default {
         .toLocaleLowerCase("es")
         .trim();
     },
-
-    detectarUbicacion() {
+    
+    async detectarUbicacion({ guardar = true } = {}) {
       if (!navigator.geolocation) {
         this.errorUbicacion =
           "Tu navegador no admite geolocalización.";
-        return;
+        return false;
       }
 
       this.detectandoUbicacion = true;
       this.errorUbicacion = "";
 
-      navigator.geolocation.getCurrentPosition(
-        async (posicion) => {
-            try {
-              const {
-                latitude,
-                longitude
-              } = posicion.coords;
+      try {
+        const posicion = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            resolve,
+            reject,
+            {
+              enableHighAccuracy: true,
+              timeout: 20000,
+              maximumAge: 300000,
+            }
+          );
+        });
 
-              const respuesta = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1&accept-language=es`
-              );
+        const { latitude, longitude } = posicion.coords;
 
-              if (!respuesta.ok) {
-                throw new Error(
-                  "No se pudo identificar tu ubicación."
-                );
-              }
+        const respuesta = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1&accept-language=es`
+        );
 
-              const resultado = await respuesta.json();
-              const direccion = resultado.address || {};
+        if (!respuesta.ok) {
+          throw new Error("No se pudo identificar tu ubicación.");
+        }
 
-              const departamento =
-                direccion.state ||
-                direccion.province ||
-                direccion.region ||
-                "";
+        const resultado = await respuesta.json();
+        const direccion = resultado.address || {};
 
-              const municipio =
-                direccion.city ||
-                direccion.town ||
-                direccion.municipality ||
-                direccion.county ||
-                direccion.village ||
-                "";
+        const normalizar = (texto) =>
+          String(texto || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLocaleLowerCase("es")
+            .trim();
 
-              const departamentoCatalogo = Object.keys(
-                this.municipiosPorDepartamento
-              ).find(
-                (nombre) =>
-                this.normalizar(nombre) ===
-                this.normalizar(departamento)
-              );
+        const departamento =
+          direccion.state ||
+          direccion.province ||
+          direccion.region ||
+          "";
 
-              if (!departamentoCatalogo) {
-                throw new Error(
-                  "No encontramos el departamento en el catálogo. Selecciónalo manualmente."
-                );
-              }
+        const departamentoCatalogo = Object.keys(
+          this.municipiosPorDepartamento
+        ).find(
+          (nombre) => normalizar(nombre) === normalizar(departamento)
+        );
 
-              const municipioCatalogo =
-                this.municipiosPorDepartamento[
-                  departamentoCatalogo
-                ].find(
-                  (nombre) =>
-                  this.normalizar(nombre) ===
-                  this.normalizar(municipio)
-                );
+        if (!departamentoCatalogo) {
+          throw new Error(
+            "No encontramos el departamento. Selecciónalo manualmente."
+          );
+        }
 
-              if (!municipioCatalogo) {
-                throw new Error(
-                  "No encontramos el municipio en el catálogo. Selecciónalo manualmente."
-                );
-              }
+        const posiblesMunicipios = [
+          direccion.city,
+          direccion.town,
+          direccion.municipality,
+          direccion.village,
+          direccion.city_district,
+          direccion.county,
+        ].filter(Boolean);
 
-              this.seleccionarUbicacion({
+        const municipios =
+          this.municipiosPorDepartamento[departamentoCatalogo] || [];
+
+        const municipioCatalogo = posiblesMunicipios
+          .map((nombre) =>
+            municipios.find(
+              (municipio) => normalizar(municipio) === normalizar(nombre)
+            )
+          )
+          .find(Boolean);
+
+        if (!municipioCatalogo) {
+          throw new Error(
+            "No encontramos el municipio. Selecciónalo manualmente."
+          );
+        }
+
+        this.departamentoSeleccionado = departamentoCatalogo;
+        this.municipioSeleccionado = municipioCatalogo;
+
+        if (guardar) {
+          localStorage.setItem(
+            "pia_ubicacion_publica",
+            JSON.stringify({
+              departamento: departamentoCatalogo,
+              municipio: municipioCatalogo,
+              origen: "GPS",
+            })
+          );
+
+          window.dispatchEvent(
+            new CustomEvent("pia:ubicacion-cambiada", {
+              detail: {
                 departamento: departamentoCatalogo,
                 municipio: municipioCatalogo,
-              });
-            } catch (error) {
-              console.error(
-                "Error al detectar ubicación:",
-                error
-              );
+              },
+            })
+          );
+        }
 
-              this.errorUbicacion =
-                error.message ||
-                "No pudimos detectar tu ubicación.";
-            } finally {
-              this.detectandoUbicacion = false;
-            }
-          },
+        return true;
 
-          (error) => {
-            const mensajes = {
-              1: "Debes permitir el acceso a tu ubicación.",
-              2: "No fue posible determinar tu ubicación.",
-              3: "La solicitud tardó demasiado.",
-            };
+      } catch (error) {
+        console.error("Error al detectar ubicación:", error);
 
-            this.errorUbicacion =
-              mensajes[error.code] ||
-              "No pudimos obtener tu ubicación.";
+        const mensajes = {
+          1: "Debes permitir el acceso a tu ubicación.",
+          2: "No fue posible determinar tu ubicación.",
+          3: "La solicitud GPS tardó demasiado.",
+        };
 
-            this.detectandoUbicacion = false;
-          },
+        this.errorUbicacion =
+          mensajes[error.code] ||
+          error.message ||
+          "No pudimos obtener tu ubicación.";
 
-          {
-            enableHighAccuracy: false,
-            timeout: 15000,
-            maximumAge: 300000,
-          }
-      );
+        return false;
+
+      } finally {
+        this.detectandoUbicacion = false;
+      }
     },
 
     irARegistroNegocio() {
@@ -484,28 +503,44 @@ export default {
     },
   },
 
-  mounted() {
+  async mounted() {
+    let ubicacionGuardada = null;
+
     try {
-      const guardada = localStorage.getItem(
-        "pia_ubicacion_publica"
-      );
+      const guardada = localStorage.getItem("pia_ubicacion_publica");
 
       if (guardada) {
-        const ubicacion = JSON.parse(guardada);
-
-        this.departamentoSeleccionado =
-          ubicacion.departamento || "";
-
-        this.municipioSeleccionado =
-          ubicacion.municipio || "";
+        ubicacionGuardada = JSON.parse(guardada);
       }
     } catch (error) {
-      console.warn(
-        "No se pudo recuperar la ubicación pública:",
-        error
-      );
+      console.warn("Error recuperando ubicación:", error);
     }
+
+    // Si el usuario ya eligió manualmente una ubicación,
+    // respetamos esa selección.
+    if (ubicacionGuardada?.origen === "MANUAL" && ubicacionGuardada.departamento && ubicacionGuardada.municipio) {
+      this.departamentoSeleccionado = ubicacionGuardada.departamento;
+      this.municipioSeleccionado = ubicacionGuardada.municipio;
+      return;
+    }
+
+    // Si no existe ubicación guardada, intentamos detectar GPS.
+    if (!ubicacionGuardada) {
+      const detectada = await this.detectarUbicacion();
+
+      if (!detectada) {
+        this.hojaUbicacion = true;
+      }
+
+      return;
+    }
+
+    // Recuperar ubicación GPS guardada.
+    this.departamentoSeleccionado = ubicacionGuardada.departamento || "";
+    this.municipioSeleccionado = ubicacionGuardada.municipio || "";
+    console.log('departamento y municipio: ', this.departamentoSeleccionado, this.municipioSeleccionado)
   },
+
 };
 </script>
 
